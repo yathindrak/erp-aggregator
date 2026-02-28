@@ -8,11 +8,51 @@ datasource db {
     url      = env("DATABASE_URL")
 }
 
-model Post {
-    id        Int      @id @default(autoincrement())
-    name      String
+/// Clients managed by the accountant
+model Client {
+    id               String            @id @default(uuid())
+    name             String
+    createdAt        DateTime          @default(now())
+    updatedAt        DateTime          @updatedAt
+    erpConnections   Connection[]
+    aggregatedMetric AggregatedMetric?
+}
+
+/// Link between a client and their active ERP credentials
+model Connection {
+    id       String @id @default(uuid())
+    clientId String
+
+    /// String instead of Enum to allow dynamic adapter additions without DB migrations
+    erpName String // e.g., 'tripletex'
+
+    // Flexible credentials block covering all vendor-specific tokens
+    credentials    Json?
+    tokenExpiresAt DateTime?
+
+    // TODO: see if really needed?
+    // Many ERPs have a tenant or company ID associated with the token.
+    tenantId String? // e.g. Xero tenant ID, Tripletex isnt needed
+
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 
-    @@index([name])
+    client Client @relation(fields: [clientId], references: [id])
+
+    @@unique([clientId, erpName])
+}
+
+/// Computed metrics for the dashboard
+model AggregatedMetric {
+    id               String    @id @default(uuid())
+    clientId         String    @unique
+    totalAR          Float
+    totalAP          Float
+    overdueCount     Int
+    overdueTotal     Float
+    cashPosition     Float
+    lastActivityDate DateTime?
+    lastUpdated      DateTime  @default(now())
+
+    client Client @relation(fields: [clientId], references: [id])
 }
