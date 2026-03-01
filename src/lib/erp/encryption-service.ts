@@ -12,7 +12,7 @@ export function decrypt(ciphertext: string | null | undefined): string | null {
 	try {
 		const bytes = CryptoJS.AES.decrypt(ciphertext, env.ENCRYPTION_KEY);
 		return bytes.toString(CryptoJS.enc.Utf8);
-	} catch (e) {
+	} catch (_e) {
 		// Catch cases where the string isn't actually encrypted yet
 		return ciphertext;
 	}

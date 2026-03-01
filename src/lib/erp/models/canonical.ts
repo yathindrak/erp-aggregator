@@ -1,6 +1,6 @@
-export type InvoiceStatus = 'DRAFT' | 'UNPAID' | 'PAID' | 'OVERDUE' | 'VOIDED';
+export type InvoiceStatus = "DRAFT" | "UNPAID" | "PAID" | "OVERDUE" | "VOIDED";
 
-export type InvoiceType = 'AR' | 'AP';
+export type InvoiceType = "AR" | "AP";
 
 export interface CanonicalInvoice {
 	id: string;
@@ -15,7 +15,7 @@ export interface CanonicalInvoice {
 	contactId: string;
 }
 
-export type ContactType = 'CUSTOMER' | 'SUPPLIER' | 'BOTH';
+export type ContactType = "CUSTOMER" | "SUPPLIER" | "BOTH";
 
 export interface CanonicalContact {
 	id: string;
@@ -34,11 +34,16 @@ export interface CanonicalAddress {
 	countryCode: string;
 }
 
-export type AccountType = 'ASSET' | 'LIABILITY' | 'EQUITY' | 'REVENUE' | 'EXPENSE';
+export type AccountType =
+	| "ASSET"
+	| "LIABILITY"
+	| "EQUITY"
+	| "REVENUE"
+	| "EXPENSE";
 
 export interface CanonicalAccount {
 	id: string;
-	code: string;              // Nominal code like "3000" or "4000"
+	code: string; // Nominal code like "3000" or "4000"
 	name: string;
 	type: AccountType;
 	isActive: boolean;
@@ -53,7 +58,7 @@ export interface CanonicalJournalEntry {
 }
 
 export interface CanonicalJournalLine {
-	accountId: string;         // Maps to canonical account id
-	amount: number;            // Positive for Debit, Negative for Credit
+	accountId: string; // Maps to canonical account id
+	amount: number; // Positive for Debit, Negative for Credit
 	taxAmount?: number;
 }
