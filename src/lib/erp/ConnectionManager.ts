@@ -1,7 +1,10 @@
 import { isAfter } from "date-fns";
 import type { PrismaClient } from "../../../generated/prisma";
 import { db } from "@/server/db";
-import { adapterRegistry, type AdapterRegistry } from "./adapters/AdapterRegistry";
+import {
+	adapterRegistry,
+	type AdapterRegistry,
+} from "./adapters/AdapterRegistry";
 import type { IErpAdapterPlugin } from "./adapters/base";
 import { decryptBlob, encryptBlob } from "./encryption-service";
 
@@ -12,19 +15,25 @@ type ErpCredentialInput = {
 };
 
 export class ConnectionManager {
-	constructor(private db: PrismaClient, private registry: AdapterRegistry) { }
+	constructor(
+		private db: PrismaClient,
+		private registry: AdapterRegistry,
+	) {}
 
 	/**
 	 * Persist (or update) an ERP connection for a client.
 	 */
-	async connectErp(clientId: string, erpName: string, credentials: ErpCredentialInput) {
+	async connectErp(
+		clientId: string,
+		erpName: string,
+		credentials: ErpCredentialInput,
+	) {
 		if (!this.registry.supports(erpName)) {
 			throw new Error(`Unsupported ERP: "${erpName}"`);
 		}
 
 		// We enforce that a client can only be connected to max 1 ERP at a time for simplicity.
-		const existingConnections =
-			await this.getAllConnections(clientId);
+		const existingConnections = await this.getAllConnections(clientId);
 		if (existingConnections.length > 0) {
 			const hasOtherErp = existingConnections.some(
 				(c) => c.erpName !== erpName,
@@ -53,13 +62,14 @@ export class ConnectionManager {
 			);
 		}
 
-		const encryptedCredentials =
-			encryptBlob(finalCredentials);
+		const encryptedCredentials = encryptBlob(finalCredentials);
 
 		return this.db.connection.upsert({
 			where: { clientId_erpName: { clientId, erpName } },
 			update: {
-				credentials: encryptedCredentials ? JSON.stringify(encryptedCredentials) : undefined,
+				credentials: encryptedCredentials
+					? JSON.stringify(encryptedCredentials)
+					: undefined,
 				tokenExpiresAt: credentials.expiresAt
 					? new Date(credentials.expiresAt)
 					: null,
@@ -67,7 +77,9 @@ export class ConnectionManager {
 			create: {
 				clientId,
 				erpName,
-				credentials: encryptedCredentials ? JSON.stringify(encryptedCredentials) : undefined,
+				credentials: encryptedCredentials
+					? JSON.stringify(encryptedCredentials)
+					: undefined,
 				tokenExpiresAt: credentials.expiresAt
 					? new Date(credentials.expiresAt)
 					: null,
@@ -103,7 +115,7 @@ export class ConnectionManager {
 		if (!connection) {
 			throw new Error(
 				`No ERP connection found for client "${clientId}"${erpName ? ` (ERP: ${erpName})` : ""}. ` +
-				`Please set up a connection first.`,
+					`Please set up a connection first.`,
 			);
 		}
 
@@ -142,7 +154,9 @@ export class ConnectionManager {
 			const reEncrypted = encryptBlob(credentials);
 			await this.db.connection.update({
 				where: { id: connection.id },
-				data: { credentials: reEncrypted ? JSON.stringify(reEncrypted) : undefined },
+				data: {
+					credentials: reEncrypted ? JSON.stringify(reEncrypted) : undefined,
+				},
 			});
 		}
 
@@ -150,4 +164,7 @@ export class ConnectionManager {
 	}
 }
 
-export const connectionManager = new ConnectionManager(db as unknown as PrismaClient, adapterRegistry);
+export const connectionManager = new ConnectionManager(
+	db as unknown as PrismaClient,
+	adapterRegistry,
+);

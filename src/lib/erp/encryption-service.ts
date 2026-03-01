@@ -1,5 +1,5 @@
-import CryptoJS from 'crypto-js';
-import { env } from '@/env';
+import CryptoJS from "crypto-js";
+import { env } from "@/env";
 
 export function encrypt(text: string | null | undefined): string | null {
 	if (!text) return null;
@@ -38,7 +38,9 @@ export function encryptBlob(data: Record<string, any>): Record<string, any> {
 /**
  * Takes a JSON object containing encrypted string primitives and decrypts them.
  */
-export function decryptBlob(data: Record<string, any> | null): Record<string, any> | null {
+export function decryptBlob(
+	data: Record<string, any> | null,
+): Record<string, any> | null {
 	if (!data) return null;
 	const decrypted: Record<string, any> = {};
 	for (const key of Object.keys(data)) {

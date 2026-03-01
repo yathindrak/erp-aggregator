@@ -2,13 +2,13 @@ import type {
 	CanonicalInvoice,
 	CanonicalContact,
 	CanonicalAccount,
-	CanonicalJournalEntry
-} from '../models/canonical';
+	CanonicalJournalEntry,
+} from "../models/canonical";
 
 interface ErpAuthField {
 	id: string;
 	label: string;
-	type: 'text' | 'password'; // html input type
+	type: "text" | "password"; // html input type
 	placeholder?: string;
 	hint?: string;
 }
@@ -37,10 +37,16 @@ export interface IErpAdapterPlugin<TCredentials = unknown> {
 	auth: ErpAuthenticator<TCredentials>;
 
 	// TODO: Make these required if every erp supports
-	invoices?: ErpResource<CanonicalInvoice, { status?: 'UNPAID' | 'OVERDUE'; startDate?: string; endDate?: string }>;
+	invoices?: ErpResource<
+		CanonicalInvoice,
+		{ status?: "UNPAID" | "OVERDUE"; startDate?: string; endDate?: string }
+	>;
 	contacts?: ErpResource<CanonicalContact>;
 	accounts?: ErpResource<CanonicalAccount>;
-	journals?: ErpResource<CanonicalJournalEntry, { startDate?: string; endDate?: string }>;
+	journals?: ErpResource<
+		CanonicalJournalEntry,
+		{ startDate?: string; endDate?: string }
+	>;
 
 	dashboard?: {
 		getMetrics: () => Promise<{
