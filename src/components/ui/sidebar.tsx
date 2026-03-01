@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { cn } from "@/lib/utils";
 import type React from "react";
 import { useState, createContext, useContext } from "react";
@@ -159,13 +160,13 @@ export const SidebarLink = ({
 }) => {
 	const { open, animate } = useSidebar();
 	return (
-		<a
+		<Link
 			className={cn(
 				"group/sidebar flex items-center justify-start gap-2 py-2",
 				className,
 			)}
 			href={link.href}
-			{...props}
+			{...(props as any)}
 		>
 			{link.icon}
 
@@ -178,6 +179,6 @@ export const SidebarLink = ({
 			>
 				{link.label}
 			</motion.span>
-		</a>
+		</Link>
 	);
 };

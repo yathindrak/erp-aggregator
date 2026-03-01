@@ -71,7 +71,9 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
           if (data.length === 0) {
             setShowCreateModal(true);
           } else {
-            setClientIdState(data[0]!.id);
+            const savedId = localStorage.getItem("taxxa_client_id");
+            const found = data.find((c) => c.id === savedId);
+            setClientIdState(found ? found.id : data[0]!.id);
           }
         }
       } catch (err) {
@@ -106,6 +108,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
   const setClientId = useCallback((id: string) => {
     setClientIdState(id);
+    localStorage.setItem("taxxa_client_id", id);
     setConnections([]);
     setErpNameState("");
   }, []);
@@ -123,6 +126,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const handleClientCreated = (client: Client) => {
     setClients((prev) => [...prev, client]);
     setClientIdState(client.id);
+    localStorage.setItem("taxxa_client_id", client.id);
     setShowCreateModal(false);
   };
 
