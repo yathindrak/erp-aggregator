@@ -77,8 +77,7 @@ function dateRange(startDate?: string, endDate?: string) {
 }
 
 export class TripletexAdapter
-	implements IErpAdapterPlugin<TripletexCredentials>
-{
+	implements IErpAdapterPlugin<TripletexCredentials> {
 	private api: AxiosInstance;
 
 	constructor() {
@@ -330,11 +329,11 @@ export class TripletexAdapter
 					vatNumber: c.vatNumber, // Norway, the VAT no is the same as the organization number
 					address: c.address
 						? {
-								street: c.address.street || "",
-								city: c.address.city || "",
-								postalCode: c.address.postalCode || "",
-								countryCode: c.address.countryCode || "NO", // Default to NO
-							}
+							street: c.address.street || "",
+							city: c.address.city || "",
+							postalCode: c.address.postalCode || "",
+							countryCode: c.address.countryCode || "NO", // Default to NO
+						}
 						: undefined,
 				};
 				console.log(
@@ -354,11 +353,11 @@ export class TripletexAdapter
 					vatNumber: s.vatNumber,
 					address: s.address
 						? {
-								street: s.address.street || "",
-								city: s.address.city || "",
-								postalCode: s.address.postalCode || "",
-								countryCode: s.address.countryCode || "NO", // Default to NO
-							}
+							street: s.address.street || "",
+							city: s.address.city || "",
+							postalCode: s.address.postalCode || "",
+							countryCode: s.address.countryCode || "NO", // Default to NO
+						}
 						: undefined,
 				};
 				console.log(
@@ -410,10 +409,10 @@ export class TripletexAdapter
 
 			const [vouchersRes, postingsRes] = await Promise.all([
 				this.api.get("/ledger/voucher", {
-					params: { count: 100, dateFrom: from, dateTo: to, fields: "*" },
+					params: { dateFrom: from, dateTo: to, fields: "*" },
 				}),
 				this.api.get("/ledger/posting", {
-					params: { count: 500, dateFrom: from, dateTo: to, fields: "*" },
+					params: { dateFrom: from, dateTo: to, fields: "*" },
 				}),
 			]);
 
