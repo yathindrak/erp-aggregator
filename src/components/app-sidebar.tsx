@@ -76,7 +76,7 @@ function ClientSelector() {
           >
             <div className="flex items-center gap-2">
               <IconPlus className="h-4 w-4" />
-              <span className="font-medium">Create client...</span>
+              <span className="font-medium">Create client</span>
             </div>
           </SelectItem>
         </SelectContent>
@@ -185,7 +185,7 @@ export function AppSidebar() {
             <p className="mb-2 px-2 font-semibold text-[10px] text-muted-foreground uppercase tracking-widest">
               Workspace
             </p>
-            {navLinks.map((link) => (
+            {navLinks.slice(0, 5).map((link) => (
               <SidebarLink
                 className={cn(
                   "rounded-lg transition-colors",
