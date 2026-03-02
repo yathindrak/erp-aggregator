@@ -14,30 +14,23 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import type { CanonicalInvoice } from "@/lib/erp/models/canonical";
-import { useAction } from "next-safe-action/hooks";
-import { getInvoices } from "@/actions/invoices.actions";
 import { fmtNumber, statusBadgeVariant } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 export default function InvoicesPage() {
-	const { clientId, erpName } = useWorkspace();
+	const { clientId } = useWorkspace();
 	const [invoices, setInvoices] = useState<CanonicalInvoice[]>([]);
 	const [loading, setLoading] = useState(false);
 	const [filter, setFilter] = useState<"all" | "UNPAID" | "OVERDUE">("all");
 
-	const { executeAsync: executeGetInvoices } = useAction(getInvoices);
-
 	const load = useCallback(async () => {
-		if (!clientId || !erpName) return;
+		if (!clientId) return;
 		setLoading(true);
 		try {
-			const res = await executeGetInvoices({
-				clientId,
-				erpName,
-				status: filter !== "all" ? (filter as "UNPAID" | "OVERDUE") : undefined,
-			});
-			if (res?.data) {
-				const data = res.data;
+			const statusParam = filter !== "all" ? `?status=${filter.toLowerCase()}` : "";
+			const res = await fetch(`/api/clients/${clientId}/invoices${statusParam}`);
+			const data = await res.json();
+			if (res.ok) {
 				setInvoices(Array.isArray(data) ? data : []);
 			} else {
 				setInvoices([]);
@@ -47,7 +40,7 @@ export default function InvoicesPage() {
 		} finally {
 			setLoading(false);
 		}
-	}, [clientId, erpName, filter, executeGetInvoices]);
+	}, [clientId, filter]);
 
 	useEffect(() => {
 		void load();
@@ -131,24 +124,16 @@ export default function InvoicesPage() {
 									))}
 								</TableRow>
 							))
-						) : !erpName ? (
-							<TableRow className="border-border/40">
-								<TableCell
-									className="py-12 text-center text-muted-foreground text-sm"
-									colSpan={8}
-								>
-									Please connect an ERP first.
-								</TableCell>
-							</TableRow>
 						) : invoices.length === 0 ? (
 							<TableRow className="border-border/40">
 								<TableCell
 									className="py-12 text-center text-muted-foreground text-sm"
 									colSpan={8}
 								>
-									No invoices found.
+									No invoices found. Please connect an ERP first.
 								</TableCell>
 							</TableRow>
+
 						) : (
 							invoices.map((inv) => (
 								<TableRow

@@ -69,6 +69,7 @@ export class ConnectionManager {
 				credentials: encryptedCredentials
 					? JSON.stringify(encryptedCredentials)
 					: undefined,
+				reauthRequired: false,
 				tokenExpiresAt: finalCredentials.expiresAt
 					? new Date(finalCredentials.expiresAt as string | number | Date)
 					: null,
@@ -79,6 +80,7 @@ export class ConnectionManager {
 				credentials: encryptedCredentials
 					? JSON.stringify(encryptedCredentials)
 					: undefined,
+				reauthRequired: false,
 				tokenExpiresAt: finalCredentials.expiresAt
 					? new Date(finalCredentials.expiresAt as string | number | Date)
 					: null,
@@ -131,33 +133,43 @@ export class ConnectionManager {
 			credentials = (decryptBlob(rawBlob) as Record<string, unknown>) || {};
 		}
 
-		const newToken = await adapter.auth.authenticate(credentials);
+		try {
+			const newToken = await adapter.auth.authenticate(credentials);
 
-		if (newToken) {
-			let needsUpdate = false;
-			let newExpiresAt = connection.tokenExpiresAt;
+			if (newToken) {
+				let needsUpdate = false;
+				let newExpiresAt = connection.tokenExpiresAt;
 
-			if (typeof newToken === "string" && newToken !== credentials.accessToken) {
-				credentials.accessToken = newToken;
-				needsUpdate = true;
-			} else if (typeof newToken === "object") {
-				Object.assign(credentials, newToken);
-				needsUpdate = true;
-				if ("expiresAt" in newToken && newToken.expiresAt) {
-					newExpiresAt = new Date(newToken.expiresAt as string | number | Date);
+				if (typeof newToken === "string" && newToken !== credentials.accessToken) {
+					credentials.accessToken = newToken;
+					needsUpdate = true;
+				} else if (typeof newToken === "object") {
+					Object.assign(credentials, newToken);
+					needsUpdate = true;
+					if ("expiresAt" in newToken && newToken.expiresAt) {
+						newExpiresAt = new Date(newToken.expiresAt as string | number | Date);
+					}
+				}
+
+				if (needsUpdate || connection.reauthRequired) {
+					const reEncrypted = encryptBlob(credentials);
+					await this.db.connection.update({
+						where: { id: connection.id },
+						data: {
+							credentials: reEncrypted ? JSON.stringify(reEncrypted) : undefined,
+							tokenExpiresAt: newExpiresAt,
+							reauthRequired: false, // Reset on successful re-auth
+						},
+					});
 				}
 			}
-
-			if (needsUpdate) {
-				const reEncrypted = encryptBlob(credentials);
-				await this.db.connection.update({
-					where: { id: connection.id },
-					data: {
-						credentials: reEncrypted ? JSON.stringify(reEncrypted) : undefined,
-						tokenExpiresAt: newExpiresAt,
-					},
-				});
-			}
+		} catch (e: unknown) {
+			// If authentication fails, mark it as needing re-authorization
+			await this.db.connection.update({
+				where: { id: connection.id },
+				data: { reauthRequired: true },
+			});
+			throw e;
 		}
 
 		return adapter;

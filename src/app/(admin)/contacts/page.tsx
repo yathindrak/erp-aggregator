@@ -13,8 +13,6 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import type { CanonicalContact } from "@/lib/erp/models/canonical";
-import { useAction } from "next-safe-action/hooks";
-import { getContacts } from "@/actions/contacts.actions";
 
 function contactTypeBadge(type: string) {
 	switch (type) {
@@ -28,19 +26,17 @@ function contactTypeBadge(type: string) {
 }
 
 export default function ContactsPage() {
-	const { clientId, erpName } = useWorkspace();
+	const { clientId } = useWorkspace();
 	const [contacts, setContacts] = useState<CanonicalContact[]>([]);
 	const [loading, setLoading] = useState(false);
 
-	const { executeAsync: executeGetContacts } = useAction(getContacts);
-
 	const load = useCallback(async () => {
-		if (!clientId || !erpName) return;
+		if (!clientId) return;
 		setLoading(true);
 		try {
-			const res = await executeGetContacts({ clientId, erpName });
-			if (res?.data) {
-				const data = res.data;
+			const res = await fetch(`/api/clients/${clientId}/contacts`);
+			const data = await res.json();
+			if (res.ok) {
 				setContacts(Array.isArray(data) ? data : []);
 			} else {
 				setContacts([]);
@@ -50,11 +46,12 @@ export default function ContactsPage() {
 		} finally {
 			setLoading(false);
 		}
-	}, [clientId, erpName, executeGetContacts]);
+	}, [clientId]);
 
 	useEffect(() => {
 		void load();
 	}, [load]);
+
 
 	return (
 		<div className="mx-auto max-w-[1400px] space-y-6 p-8">
@@ -99,22 +96,13 @@ export default function ContactsPage() {
 									))}
 								</TableRow>
 							))
-						) : !erpName ? (
-							<TableRow className="border-border/40">
-								<TableCell
-									className="py-12 text-center text-muted-foreground text-sm"
-									colSpan={5}
-								>
-									Please connect an ERP first.
-								</TableCell>
-							</TableRow>
 						) : contacts.length === 0 ? (
 							<TableRow className="border-border/40">
 								<TableCell
 									className="py-12 text-center text-muted-foreground text-sm"
 									colSpan={5}
 								>
-									No contacts found.
+									No contacts found. Please connect an ERP first.
 								</TableCell>
 							</TableRow>
 						) : (

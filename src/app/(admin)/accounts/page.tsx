@@ -13,23 +13,20 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import type { CanonicalAccount } from "@/lib/erp/models/canonical";
-import { useAction } from "next-safe-action/hooks";
-import { getAccounts } from "@/actions/accounts.actions";
+
 
 export default function AccountsPage() {
-	const { clientId, erpName } = useWorkspace();
+	const { clientId } = useWorkspace();
 	const [accounts, setAccounts] = useState<CanonicalAccount[]>([]);
 	const [loading, setLoading] = useState(false);
 
-	const { executeAsync: executeGetAccounts } = useAction(getAccounts);
-
 	const load = useCallback(async () => {
-		if (!clientId || !erpName) return;
+		if (!clientId) return;
 		setLoading(true);
 		try {
-			const res = await executeGetAccounts({ clientId, erpName });
-			if (res?.data) {
-				const data = res.data;
+			const res = await fetch(`/api/clients/${clientId}/accounts`);
+			const data = await res.json();
+			if (res.ok) {
 				setAccounts(Array.isArray(data) ? data : []);
 			} else {
 				setAccounts([]);
@@ -39,7 +36,7 @@ export default function AccountsPage() {
 		} finally {
 			setLoading(false);
 		}
-	}, [clientId, erpName, executeGetAccounts]);
+	}, [clientId]);
 
 	useEffect(() => {
 		void load();
@@ -88,24 +85,16 @@ export default function AccountsPage() {
 									))}
 								</TableRow>
 							))
-						) : !erpName ? (
-							<TableRow className="border-border/40">
-								<TableCell
-									className="py-12 text-center text-muted-foreground text-sm"
-									colSpan={4}
-								>
-									Please connect an ERP first.
-								</TableCell>
-							</TableRow>
 						) : accounts.length === 0 ? (
 							<TableRow className="border-border/40">
 								<TableCell
 									className="py-12 text-center text-muted-foreground text-sm"
 									colSpan={4}
 								>
-									No accounts found.
+									No accounts found. Please connect an ERP first.
 								</TableCell>
 							</TableRow>
+
 						) : (
 							accounts.map((a) => (
 								<TableRow

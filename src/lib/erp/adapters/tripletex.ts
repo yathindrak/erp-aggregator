@@ -6,8 +6,9 @@ import type {
 	CanonicalJournalEntry,
 	AccountType,
 } from "../models/canonical";
-import axios, { type AxiosInstance } from "axios";
+import { type AxiosInstance } from "axios";
 import { addDays, addMonths, subMonths, isBefore, format } from "date-fns";
+import { createApiClient } from "./api-client";
 
 export type TripletexCredentials = {
 	consumerToken?: string;
@@ -83,7 +84,7 @@ export class TripletexAdapter
 	private api: AxiosInstance;
 
 	constructor() {
-		this.api = axios.create({
+		this.api = createApiClient({
 			baseURL: "https://api-test.tripletex.tech/v2/",
 		});
 	}
@@ -248,10 +249,6 @@ export class TripletexAdapter
 					openAmount: openAmt,
 					contactId: String(inv.customer?.id),
 				};
-				console.log(
-					"[Tripletex] AR Canonical Invoice:",
-					JSON.stringify(invoice, null, 2),
-				);
 				return invoice;
 			};
 
@@ -274,10 +271,7 @@ export class TripletexAdapter
 					openAmount: openAmt,
 					contactId: String(inv.supplier?.id),
 				};
-				console.log(
-					"[Tripletex] AP Canonical Invoice:",
-					JSON.stringify(invoice, null, 2),
-				);
+
 				return invoice;
 			};
 
@@ -356,10 +350,6 @@ export class TripletexAdapter
 						}
 						: undefined,
 				};
-				console.log(
-					"[Tripletex] Customer Canonical Contact:",
-					JSON.stringify(canonContact, null, 2),
-				);
 				res.push(canonContact);
 			});
 
@@ -380,10 +370,6 @@ export class TripletexAdapter
 						}
 						: undefined,
 				};
-				console.log(
-					"[Tripletex] Supplier Canonical Contact:",
-					JSON.stringify(contact, null, 2),
-				);
 				res.push(contact);
 			});
 

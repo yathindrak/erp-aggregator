@@ -9,6 +9,7 @@ import type {
 import axios, { type AxiosInstance } from "axios";
 import { isBefore, formatISO, addMinutes, addSeconds } from "date-fns";
 import { env } from "@/env";
+import { createApiClient } from "./api-client";
 
 const parseXeroDate = (dateString?: string): string => {
 	if (!dateString) return "";
@@ -85,7 +86,7 @@ export class XeroAdapter implements IErpAdapterPlugin<XeroCredentials> {
 	private api: AxiosInstance;
 
 	constructor() {
-		this.api = axios.create({
+		this.api = createApiClient({
 			baseURL: "https://api.xero.com/api.xro/2.0",
 		});
 	}
@@ -226,11 +227,6 @@ export class XeroAdapter implements IErpAdapterPlugin<XeroCredentials> {
 					contactId: String(inv.Contact?.ContactID),
 				};
 
-				console.log(
-					"[Xero] Canonical Invoice:",
-					JSON.stringify(invoice, null, 2),
-				);
-
 				return invoice;
 			});
 
@@ -249,12 +245,9 @@ export class XeroAdapter implements IErpAdapterPlugin<XeroCredentials> {
 		getMetrics: async () => {
 			const invoices = await this.invoices.fetch();
 
-			console.log("[Xero] Invoices:", JSON.stringify(invoices, null, 2));
-
 			const reports = await this.api.get("/Reports/BankSummary", {
 				validateStatus: () => true,
 			});
-			console.log({ "Bank Summary report rows": JSON.stringify(reports.data.Reports[0].Rows, null, 2) })
 
 			let cashPosition = 0;
 			try {
@@ -319,10 +312,6 @@ export class XeroAdapter implements IErpAdapterPlugin<XeroCredentials> {
 					vatNumber: c.TaxNumber,
 				};
 
-				console.log(
-					"[Xero] Canonical Contact:",
-					JSON.stringify(canonContact, null, 2),
-				);
 				res.push(canonContact);
 			});
 

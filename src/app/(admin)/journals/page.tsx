@@ -18,25 +18,21 @@ import {
 } from "@tabler/icons-react";
 import type { CanonicalJournalEntry } from "@/lib/erp/models/canonical";
 import { cn } from "@/lib/utils";
-import { useAction } from "next-safe-action/hooks";
-import { getJournals } from "@/actions/journals.actions";
 import { fmtNumber } from "@/lib/format";
 
 export default function JournalsPage() {
-	const { clientId, erpName } = useWorkspace();
+	const { clientId } = useWorkspace();
 	const [journals, setJournals] = useState<CanonicalJournalEntry[]>([]);
 	const [loading, setLoading] = useState(false);
 	const [expandedId, setExpandedId] = useState<string | null>(null);
 
-	const { executeAsync: executeGetJournals } = useAction(getJournals);
-
 	const load = useCallback(async () => {
-		if (!clientId || !erpName) return;
+		if (!clientId) return;
 		setLoading(true);
 		try {
-			const res = await executeGetJournals({ clientId, erpName });
-			if (res?.data) {
-				const data = res.data;
+			const res = await fetch(`/api/clients/${clientId}/journals`);
+			const data = await res.json();
+			if (res.ok) {
 				setJournals(Array.isArray(data) ? data : []);
 			} else {
 				setJournals([]);
@@ -46,7 +42,7 @@ export default function JournalsPage() {
 		} finally {
 			setLoading(false);
 		}
-	}, [clientId, erpName, executeGetJournals]);
+	}, [clientId]);
 
 	useEffect(() => {
 		void load();
@@ -99,24 +95,16 @@ export default function JournalsPage() {
 									))}
 								</TableRow>
 							))
-						) : !erpName ? (
-							<TableRow className="border-border/40">
-								<TableCell
-									className="py-12 text-center text-muted-foreground text-sm"
-									colSpan={4}
-								>
-									Please connect an ERP first.
-								</TableCell>
-							</TableRow>
 						) : journals.length === 0 ? (
 							<TableRow className="border-border/40">
 								<TableCell
 									className="py-12 text-center text-muted-foreground text-sm"
 									colSpan={4}
 								>
-									No journal entries found.
+									No journal entries found. Please connect an ERP first.
 								</TableCell>
 							</TableRow>
+
 						) : (
 							journals.map((j) => {
 								const isExpanded = expandedId === j.id;

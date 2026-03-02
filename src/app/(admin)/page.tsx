@@ -8,12 +8,10 @@ import {
 	IconAlertTriangle,
 	IconBuildingBank,
 	IconPlugConnected,
+	IconRefresh,
 } from "@tabler/icons-react";
 import Link from "next/link";
 import type { CanonicalInvoice } from "@/lib/erp/models/canonical";
-import { useAction } from "next-safe-action/hooks";
-import { getDashboard } from "@/actions/dashboard.actions";
-import { getInvoices } from "@/actions/invoices.actions";
 import { formatDistanceToNow } from "date-fns";
 import { MetricCard } from "../../components/metric-card";
 import { RecentInvoices } from "../../components/recent-invoices";
@@ -26,6 +24,7 @@ interface DashboardMetrics {
 	overdueTotal?: number;
 	cashPosition?: number;
 	lastUpdated?: string;
+	isStale?: boolean;
 	error?: string;
 }
 
@@ -34,46 +33,54 @@ export default function DashboardPage() {
 
 	const [metrics, setMetrics] = useState<DashboardMetrics>({});
 	const [metricsLoading, setMetricsLoading] = useState(false);
+	const [refreshing, setRefreshing] = useState(false);
 	const [invoices, setInvoices] = useState<CanonicalInvoice[]>([]);
 	const [invLoading, setInvLoading] = useState(false);
 	const [invoiceFilter, setInvoiceFilter] = useState<
 		"all" | "UNPAID" | "OVERDUE"
 	>("all");
-	const { executeAsync: executeGetDashboard } = useAction(getDashboard);
-	const { executeAsync: executeGetInvoices } = useAction(getInvoices);
 
-	const loadMetrics = useCallback(async () => {
+	const loadData = useCallback(async (refresh = false) => {
 		if (!clientId) return;
+		if (refresh) setRefreshing(true);
 		setMetricsLoading(true);
+		setInvLoading(true);
 		try {
-			const res = await executeGetDashboard({ clientId });
-			if (res?.data) {
-				setMetrics(res.data as DashboardMetrics);
+			const res = await fetch(`/api/clients/${clientId}/dashboard${refresh ? "?refresh=true" : ""}`);
+			const data = await res.json();
+
+			if (res.ok) {
+				setMetrics(data);
+				if (data.recentTransactions) {
+					setInvoices(data.recentTransactions);
+				}
 			} else {
-				setMetrics({ error: res?.serverError || "Failed to load metrics" });
+				setMetrics({ error: data.error || "Failed to load dashboard" });
 			}
-		} catch {
+		} catch (error) {
 			setMetrics({ error: "Failed to load metrics" });
 		} finally {
 			setMetricsLoading(false);
+			setInvLoading(false);
+			if (refresh) setRefreshing(false);
 		}
-	}, [clientId, executeGetDashboard]);
+	}, [clientId]);
 
-	const loadInvoices = useCallback(async () => {
-		if (!clientId || !erpName) return;
+	const loadFilteredInvoices = useCallback(async () => {
+		if (!clientId || invoiceFilter === "all") {
+			if (invoiceFilter === "all") {
+				void loadData();
+				return;
+			}
+			return;
+		}
+
 		setInvLoading(true);
 		try {
-			const res = await executeGetInvoices({
-				clientId,
-				erpName,
-				status:
-					invoiceFilter !== "all"
-						? (invoiceFilter as "UNPAID" | "OVERDUE")
-						: undefined,
-			});
-			if (res?.data) {
-				const data = res.data;
-				setInvoices(Array.isArray(data) ? data.slice(0, 20) : []);
+			const res = await fetch(`/api/clients/${clientId}/invoices?status=${invoiceFilter.toLowerCase()}`);
+			const data = await res.json();
+			if (res.ok) {
+				setInvoices(data);
 			} else {
 				setInvoices([]);
 			}
@@ -82,15 +89,18 @@ export default function DashboardPage() {
 		} finally {
 			setInvLoading(false);
 		}
-	}, [clientId, erpName, invoiceFilter, executeGetInvoices]);
+	}, [clientId, invoiceFilter, loadData]);
 
 	useEffect(() => {
-		void loadMetrics();
-	}, [loadMetrics]);
+		void loadData();
+	}, [loadData]);
 
 	useEffect(() => {
-		void loadInvoices();
-	}, [loadInvoices]);
+		if (invoiceFilter !== "all") {
+			void loadFilteredInvoices();
+		}
+	}, [loadFilteredInvoices, invoiceFilter]);
+
 
 	return (
 		<div className="mx-auto max-w-[1400px] space-y-8 p-8">
@@ -104,6 +114,15 @@ export default function DashboardPage() {
 						Live data from connected ERP systems
 					</p>
 				</div>
+				<button
+					type="button"
+					onClick={() => void loadData(true)}
+					disabled={refreshing || metricsLoading}
+					className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium hover:bg-white/10 disabled:opacity-50 transition-colors"
+				>
+					<IconRefresh className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+					{refreshing ? "Refreshing..." : "Refresh"}
+				</button>
 			</div>
 
 			{/* No connection warning */}
@@ -119,6 +138,16 @@ export default function DashboardPage() {
 							Connections
 						</Link>{" "}
 						to link an ERP account.
+					</span>
+				</div>
+			)}
+
+			{/* Stale data warning */}
+			{metrics.isStale && (
+				<div className="flex items-center gap-3 rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 text-yellow-500 text-sm">
+					<IconAlertTriangle className="h-4 w-4 shrink-0" />
+					<span>
+						Dashboard is showing cached data from earlier.
 					</span>
 				</div>
 			)}

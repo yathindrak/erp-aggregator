@@ -29,7 +29,8 @@ export const getConnections = actionClient
 		return connections.map((c) => ({
 			erpName: c.erpName,
 			hasToken: !!c.credentials,
-			tokenExpiresAt: c.tokenExpiresAt,
+			tokenExpiresAt: c.tokenExpiresAt ? c.tokenExpiresAt.toISOString() : null,
+			reauthRequired: c.reauthRequired,
 		}));
 	});
 

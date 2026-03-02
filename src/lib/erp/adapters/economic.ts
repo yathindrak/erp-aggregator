@@ -6,9 +6,10 @@ import type {
     CanonicalJournalEntry,
     AccountType,
 } from "../models/canonical";
-import axios, { type AxiosInstance } from "axios";
-import { addDays, subMonths, isBefore, format } from "date-fns";
+import { type AxiosInstance } from "axios";
+import { isBefore } from "date-fns";
 import { env } from "@/env";
+import { createApiClient } from "./api-client";
 
 export type EconomicCredentials = {
     appSecretToken?: string;
@@ -20,7 +21,7 @@ export class EconomicAdapter implements IErpAdapterPlugin<EconomicCredentials> {
     private api: AxiosInstance;
 
     constructor() {
-        this.api = axios.create({
+        this.api = createApiClient({
             baseURL: "https://restapi.e-conomic.com",
             headers: {
                 "Content-Type": "application/json",

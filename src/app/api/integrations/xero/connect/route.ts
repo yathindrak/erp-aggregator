@@ -54,6 +54,5 @@ export async function GET(request: Request): Promise<NextResponse> {
     });
 
     const authorizeUrl = `${XERO_AUTHORIZE_URL}?${params.toString()}`;
-    console.log(authorizeUrl)
     return NextResponse.redirect(authorizeUrl);
 }

@@ -13,6 +13,8 @@ import {
 	IconLoader2,
 	IconPlugConnected,
 	IconPlugOff,
+	IconAlertCircle,
+	IconClock,
 } from "@tabler/icons-react";
 import type { ErpMetadata } from "@/lib/erp/adapters/base";
 import { cn } from "@/lib/utils";
@@ -27,21 +29,27 @@ import {
 interface Connection {
 	erpName: string;
 	hasToken: boolean;
+	tokenExpiresAt: string | null;
+	reauthRequired: boolean;
 }
 
 function AdapterCard({
 	adapter,
-	isConnected,
+	connection,
 	clientId,
 	onSuccess,
 	isLocked,
 }: {
 	adapter: ErpMetadata;
-	isConnected: boolean;
+	connection?: Connection;
 	clientId: string;
 	onSuccess: () => void;
 	isLocked: boolean;
 }) {
+	const isConnected = !!connection?.hasToken;
+	const isExpired = connection?.tokenExpiresAt && new Date(connection.tokenExpiresAt) < new Date();
+	const isReauthRequired = !!connection?.reauthRequired;
+
 	const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
 	const [loading, setLoading] = useState(false);
 	const [msg, setMsg] = useState<{
@@ -137,7 +145,17 @@ function AdapterCard({
 						</p>
 					</div>
 					<div className="shrink-0">
-						{isConnected ? (
+						{isReauthRequired ? (
+							<Badge className="gap-1 border-amber-500/30 bg-amber-500/15 text-amber-400 text-xs hover:bg-amber-500/15">
+								<IconAlertCircle className="h-3 w-3" />
+								Re-auth required
+							</Badge>
+						) : isExpired ? (
+							<Badge className="gap-1 border-amber-500/30 bg-amber-500/15 text-amber-400 text-xs hover:bg-amber-500/15">
+								<IconClock className="h-3 w-3" />
+								Token expired
+							</Badge>
+						) : isConnected ? (
 							<Badge className="gap-1 border-emerald-500/30 bg-emerald-500/15 text-emerald-400 text-xs hover:bg-emerald-500/15">
 								<IconCheck className="h-3 w-3" />
 								Connected
@@ -158,25 +176,60 @@ function AdapterCard({
 
 			<CardContent className="space-y-4">
 				{isConnected ? (
-					<div className="flex items-center gap-3 rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-3 py-2.5">
-						<IconPlugConnected className="h-4 w-4 shrink-0 text-emerald-400" />
-						<span className="flex-1 font-medium text-emerald-400 text-xs">
-							ERP data is live
-						</span>
-						<Button
-							className="h-7 px-3 text-xs"
-							disabled={disconnecting}
-							id={`disconnect-${adapter.id}-btn`}
-							onClick={handleDisconnect}
-							size="sm"
-							variant="destructive"
-						>
-							{disconnecting ? (
-								<IconLoader2 className="h-3 w-3 animate-spin" />
-							) : (
-								"Disconnect"
+					<div className="space-y-3">
+						<div
+							className={cn(
+								"flex items-center gap-3 rounded-lg border px-3 py-2.5",
+								isReauthRequired || isExpired
+									? "border-amber-500/20 bg-amber-500/5 text-amber-400"
+									: "border-emerald-500/20 bg-emerald-500/5 text-emerald-400",
 							)}
-						</Button>
+						>
+							{isReauthRequired ? (
+								<IconAlertCircle className="h-4 w-4 shrink-0" />
+							) : isExpired ? (
+								<IconClock className="h-4 w-4 shrink-0" />
+							) : (
+								<IconPlugConnected className="h-4 w-4 shrink-0" />
+							)}
+							<span className="flex-1 font-medium text-xs">
+								{isReauthRequired
+									? "Authorization expired"
+									: isExpired
+										? "Token expired"
+										: "ERP data is live"}
+							</span>
+							<Button
+								className="h-7 px-3 text-xs"
+								disabled={disconnecting}
+								id={`disconnect-${adapter.id}-btn`}
+								onClick={handleDisconnect}
+								size="sm"
+								variant="destructive"
+							>
+								{disconnecting ? (
+									<IconLoader2 className="h-3 w-3 animate-spin" />
+								) : (
+									"Disconnect"
+								)}
+							</Button>
+						</div>
+
+						{isReauthRequired && (
+							<div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3">
+								<p className="text-[11px] leading-normal text-amber-200/80">
+									Your connection with {adapter.name} has been interrupted. Please
+									re-authorize to restore the sync.
+								</p>
+								<Button
+									className="mt-2.5 h-7 w-full gap-1.5 bg-amber-600 text-[11px] hover:bg-amber-700"
+									onClick={handleConnect}
+									size="sm"
+								>
+									Re-authorize {adapter.name}
+								</Button>
+							</div>
+						)}
 					</div>
 				) : isLocked ? (
 					<div className="rounded-lg border border-border/40 bg-muted/10 p-4">
@@ -363,7 +416,7 @@ export default function ConnectionsPage() {
 							<AdapterCard
 								adapter={adapter}
 								clientId={clientId}
-								isConnected={isConnected}
+								connection={conn}
 								isLocked={isLocked}
 								key={adapter.id}
 								onSuccess={handleSuccess}

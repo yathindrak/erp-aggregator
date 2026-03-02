@@ -29,6 +29,7 @@ model Connection {
     // Flexible credentials block covering all vendor-specific tokens
     credentials    Json?
     tokenExpiresAt DateTime?
+    reauthRequired Boolean   @default(false)
 
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
