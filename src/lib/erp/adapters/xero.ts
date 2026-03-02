@@ -4,6 +4,7 @@ import type {
 	CanonicalContact,
 	CanonicalAccount,
 	CanonicalJournalEntry,
+	CanonicalPayment,
 	AccountType,
 } from "../models/canonical";
 import axios, { type AxiosInstance } from "axios";
@@ -80,6 +81,15 @@ interface XeroJournal {
 	JournalDate: string;
 	Reference?: string;
 	JournalLines?: XeroJournalLine[];
+}
+
+interface XeroPayment {
+	PaymentID: string;
+	Date: string;
+	Amount: number;
+	CurrencyCode?: string;
+	Invoice?: { InvoiceID: string };
+	Account?: { AccountID: string };
 }
 
 export class XeroAdapter implements IErpAdapterPlugin<XeroCredentials> {
@@ -369,6 +379,28 @@ export class XeroAdapter implements IErpAdapterPlugin<XeroCredentials> {
 
 				return journalEntry;
 			});
+		},
+	};
+
+	payments = {
+		fetch: async ({
+			startDate,
+			endDate,
+		}: {
+			startDate?: string;
+			endDate?: string;
+		} = {}): Promise<CanonicalPayment[]> => {
+			const { data } = await this.api.get("/Payments");
+			const payments: XeroPayment[] = data.Payments || [];
+
+			return payments.map((p: XeroPayment): CanonicalPayment => ({
+				id: p.PaymentID,
+				date: parseXeroDate(p.Date),
+				amount: p.Amount,
+				currency: p.CurrencyCode || "GBP", // Defaulting to GBP if not present, though ideally organization currency
+				invoiceId: p.Invoice?.InvoiceID,
+				bankAccountId: p.Account?.AccountID,
+			}));
 		},
 	};
 }

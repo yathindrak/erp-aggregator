@@ -62,3 +62,12 @@ export interface CanonicalJournalLine {
 	amount: number; // Positive for Debit, Negative for Credit
 	taxAmount?: number;
 }
+
+export interface CanonicalPayment {
+	id: string;
+	date: string;
+	amount: number;
+	currency: string;
+	invoiceId?: string; // Optional link to an invoice
+	bankAccountId?: string; // Optional link to a bank account
+}

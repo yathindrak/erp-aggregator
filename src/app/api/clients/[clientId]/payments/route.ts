@@ -21,20 +21,26 @@ export async function GET(
             );
         }
 
-        const allContactsResults = await Promise.all(
+        // Fetch from all connections in parallel
+        const allPayments = await Promise.all(
             connections.map(async (conn) => {
-                try {
-                    const adapter = await connectionManager.getAdapter(clientId, conn.erpName);
-                    if (!adapter.contacts) return [];
-                    const data = await adapter.contacts.fetch();
-                    return data.map(c => ({ ...c, id: `${conn.erpName}:${c.id}` }));
-                } catch (e) {
-                    console.error(`[ContactsAPI] Failed for ${conn.erpName}:`, e);
-                    return [];
-                }
+                const adapter = await connectionManager.getAdapter(clientId, conn.erpName);
+                if (!adapter.payments) return null;
+                return await adapter.payments.fetch();
             })
         );
 
-        return NextResponse.json(allContactsResults.flat());
+        const supportedPayments = allPayments.filter((p) => p !== null);
+
+        if (connections.length > 0 && supportedPayments.length === 0) {
+            return NextResponse.json(
+                { error: "Payments tracking is not supported by your connected ERPs" },
+                { status: 501 }
+            );
+        }
+
+        const flatPayments = supportedPayments.flat();
+
+        return NextResponse.json(flatPayments);
     });
 }

@@ -21,6 +21,7 @@ import {
   IconPlugConnected,
   IconBolt,
   IconPlus,
+  IconCash,
 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 
@@ -116,6 +117,20 @@ export function AppSidebar() {
       ),
     },
     {
+      label: "Payments",
+      href: "/payments",
+      icon: (
+        <IconCash
+          className={cn(
+            "h-5 w-5 shrink-0 transition-colors",
+            pathname === "/payments"
+              ? "text-blue-400"
+              : "text-muted-foreground",
+          )}
+        />
+      ),
+    },
+    {
       label: "Contacts",
       href: "/contacts",
       icon: (
@@ -185,7 +200,7 @@ export function AppSidebar() {
             <p className="mb-2 px-2 font-semibold text-[10px] text-muted-foreground uppercase tracking-widest">
               Workspace
             </p>
-            {navLinks.slice(0, 5).map((link) => (
+            {navLinks.slice(0, 6).map((link) => (
               <SidebarLink
                 className={cn(
                   "rounded-lg transition-colors",
@@ -201,7 +216,7 @@ export function AppSidebar() {
             <p className="mt-4 mb-2 px-2 font-semibold text-[10px] text-muted-foreground uppercase tracking-widest">
               Settings
             </p>
-            {navLinks.slice(5).map((link) => (
+            {navLinks.slice(6).map((link) => (
               <SidebarLink
                 className={cn(
                   "rounded-lg transition-colors",
