@@ -1,5 +1,5 @@
 import { isAfter } from "date-fns";
-import type { PrismaClient } from "../../../generated/prisma";
+import type { PrismaClient } from "@prisma/client";
 import { db } from "@/server/db";
 import {
 	adapterRegistry,
