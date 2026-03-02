@@ -140,8 +140,6 @@ export class XeroAdapter implements IErpAdapterPlugin<XeroCredentials> {
 						const expiresIn = response.data.expires_in || 1800;
 						expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
 
-						console.log("[XeroAdapter] Refresh successful");
-
 						// Apply new token to active requests immediately
 						if (accessToken) {
 							this.api.defaults.headers.common.Authorization = `Bearer ${accessToken}`;
@@ -332,7 +330,6 @@ export class XeroAdapter implements IErpAdapterPlugin<XeroCredentials> {
 
 	accounts = {
 		fetch: async (): Promise<CanonicalAccount[]> => {
-			console.log(`[Xero] Auth access token: ${this.api.defaults.headers.common.Authorization}`)
 			const { data } = await this.api.get("/Accounts");
 			const accs: XeroAccount[] = data.Accounts || [];
 
@@ -379,10 +376,6 @@ export class XeroAdapter implements IErpAdapterPlugin<XeroCredentials> {
 					})),
 				};
 
-				console.log(
-					"[Xero] Canonical Journal:",
-					JSON.stringify(journalEntry, null, 2),
-				);
 				return journalEntry;
 			});
 		},

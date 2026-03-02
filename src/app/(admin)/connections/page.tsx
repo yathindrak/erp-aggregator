@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
 	IconCheck,
+	IconExternalLink,
 	IconLoader2,
 	IconPlugConnected,
 	IconPlugOff,
@@ -51,6 +52,11 @@ function AdapterCard({
 	const { executeAsync: executeDeleteConnection } = useAction(deleteConnection);
 
 	const handleConnect = async () => {
+		if (adapter.authConfig?.oauthRoute) {
+			window.location.href = `${adapter.authConfig.oauthRoute}?clientId=${clientId}`;
+			return;
+		}
+
 		setLoading(true);
 		setMsg(null);
 		try {
@@ -109,7 +115,7 @@ function AdapterCard({
 			)}
 		>
 			<CardHeader className="pb-3">
-				<div className="flex items-center gap-3">
+				<div className="flex min-w-0 items-center gap-3">
 					<div className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-border/40 bg-muted/40 text-2xl overflow-hidden">
 						{adapter.iconUrl && (
 							<img
@@ -165,12 +171,23 @@ function AdapterCard({
 							)}
 						</Button>
 					</div>
-				) : adapter.authConfig?.fields ? (
+				) : adapter.authConfig?.fields?.length ? (
 					<div className="space-y-3 rounded-lg border border-border/40 bg-muted/20 p-4">
 						{adapter.authConfig.description && (
 							<p className="text-muted-foreground text-xs">
 								{adapter.authConfig.description}
 							</p>
+						)}
+						{adapter.authConfig.setupUrl && (
+							<a
+								className="mt-1 inline-flex items-center gap-1 text-xs text-blue-500 hover:text-blue-600 font-medium transition-colors"
+								href={adapter.authConfig.setupUrl}
+								target="_blank"
+								rel="noreferrer"
+							>
+								Open Installation URL
+								<IconExternalLink className="h-3 w-3" />
+							</a>
 						)}
 						{adapter.authConfig.fields.map((field) => (
 							<div className="space-y-1.5" key={field.id}>
@@ -224,6 +241,23 @@ function AdapterCard({
 									{msg.type === "error" ? "❌" : "✓"} {msg.text}
 								</p>
 							)}
+						</div>
+					</div>
+				) : adapter.authConfig?.oauthRoute ? (
+					<div className="space-y-3 rounded-lg border border-border/40 bg-muted/20 p-4">
+						{adapter.authConfig.description && (
+							<p className="text-muted-foreground text-xs">
+								{adapter.authConfig.description}
+							</p>
+						)}
+						<div className="flex items-center gap-3 pt-1">
+							<Button
+								className="h-8 gap-1.5 text-xs"
+								onClick={handleConnect}
+								size="sm"
+							>
+								Connect {adapter.name}
+							</Button>
 						</div>
 					</div>
 				) : (

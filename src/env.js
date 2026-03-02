@@ -9,6 +9,10 @@ export const env = createEnv({
 	server: {
 		DATABASE_URL: z.string().url(),
 		ENCRYPTION_KEY: z.string().min(32),
+		ECONOMIC_APP_SECRET_TOKEN: z.string().min(1),
+		XERO_CLIENT_ID: z.string().min(1),
+		XERO_CLIENT_SECRET: z.string().min(1),
+		APP_URL: z.string().url().default("http://localhost:3000"),
 		NODE_ENV: z
 			.enum(["development", "test", "production"])
 			.default("development"),
@@ -20,6 +24,7 @@ export const env = createEnv({
 	 * `NEXT_PUBLIC_`.
 	 */
 	client: {
+		NEXT_PUBLIC_ECONOMIC_APP_PUBLIC_TOKEN: z.string().min(1).optional(),
 		// NEXT_PUBLIC_CLIENTVAR: z.string(),
 	},
 
@@ -30,6 +35,11 @@ export const env = createEnv({
 	runtimeEnv: {
 		DATABASE_URL: process.env.DATABASE_URL,
 		ENCRYPTION_KEY: process.env.ENCRYPTION_KEY,
+		ECONOMIC_APP_SECRET_TOKEN: process.env.ECONOMIC_APP_SECRET_TOKEN,
+		XERO_CLIENT_ID: process.env.XERO_CLIENT_ID,
+		XERO_CLIENT_SECRET: process.env.XERO_CLIENT_SECRET,
+		APP_URL: process.env.APP_URL,
+		NEXT_PUBLIC_ECONOMIC_APP_PUBLIC_TOKEN: process.env.NEXT_PUBLIC_ECONOMIC_APP_PUBLIC_TOKEN,
 		NODE_ENV: process.env.NODE_ENV,
 		// NEXT_PUBLIC_CLIENTVAR: process.env.NEXT_PUBLIC_CLIENTVAR,
 	},

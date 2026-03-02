@@ -18,7 +18,7 @@ export class ConnectionManager {
 	constructor(
 		private db: PrismaClient,
 		private registry: AdapterRegistry,
-	) {}
+	) { }
 
 	/**
 	 * Persist (or update) an ERP connection for a client.
@@ -52,8 +52,12 @@ export class ConnectionManager {
 
 		try {
 			const newToken = await adapter.auth.authenticate(credentials);
-			if (newToken && typeof newToken === "string") {
-				finalCredentials.accessToken = newToken;
+			if (newToken) {
+				if (typeof newToken === "string") {
+					finalCredentials.accessToken = newToken;
+				} else if (typeof newToken === "object") {
+					Object.assign(finalCredentials, newToken);
+				}
 			}
 		} catch (e: unknown) {
 			const error = e as { message?: string };
@@ -115,16 +119,7 @@ export class ConnectionManager {
 		if (!connection) {
 			throw new Error(
 				`No ERP connection found for client "${clientId}"${erpName ? ` (ERP: ${erpName})` : ""}. ` +
-					`Please set up a connection first.`,
-			);
-		}
-
-		if (
-			connection.tokenExpiresAt &&
-			isAfter(new Date(), connection.tokenExpiresAt)
-		) {
-			throw new Error(
-				`Token for ${connection.erpName} has expired. Please reconnect your ${connection.erpName} account.`,
+				`Please set up a connection first.`,
 			);
 		}
 
@@ -143,21 +138,31 @@ export class ConnectionManager {
 
 		const newToken = await adapter.auth.authenticate(credentials);
 
-		if (
-			newToken &&
-			typeof newToken === "string" &&
-			newToken !== credentials.accessToken
-		) {
-			credentials.accessToken = newToken;
+		if (newToken) {
+			let needsUpdate = false;
+			let newExpiresAt = connection.tokenExpiresAt;
 
-			// Re-encrypt updated tokens before database insert
-			const reEncrypted = encryptBlob(credentials);
-			await this.db.connection.update({
-				where: { id: connection.id },
-				data: {
-					credentials: reEncrypted ? JSON.stringify(reEncrypted) : undefined,
-				},
-			});
+			if (typeof newToken === "string" && newToken !== credentials.accessToken) {
+				credentials.accessToken = newToken;
+				needsUpdate = true;
+			} else if (typeof newToken === "object") {
+				Object.assign(credentials, newToken);
+				needsUpdate = true;
+				if ("expiresAt" in newToken && newToken.expiresAt) {
+					newExpiresAt = new Date(newToken.expiresAt as string | number | Date);
+				}
+			}
+
+			if (needsUpdate) {
+				const reEncrypted = encryptBlob(credentials);
+				await this.db.connection.update({
+					where: { id: connection.id },
+					data: {
+						credentials: reEncrypted ? JSON.stringify(reEncrypted) : undefined,
+						tokenExpiresAt: newExpiresAt,
+					},
+				});
+			}
 		}
 
 		return adapter;

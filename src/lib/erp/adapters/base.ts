@@ -20,12 +20,14 @@ export interface ErpMetadata {
 	iconUrl: string;
 	authConfig?: {
 		description: string;
-		fields: ErpAuthField[];
+		setupUrl?: string;
+		fields?: ErpAuthField[];
+		oauthRoute?: string;
 	};
 }
 
 interface ErpAuthenticator<TCredentials = unknown> {
-	authenticate: (credentials: TCredentials) => Promise<string | undefined>;
+	authenticate: (credentials: TCredentials) => Promise<string | Partial<TCredentials> | undefined>;
 }
 
 interface ErpResource<T, TParams = unknown> {
