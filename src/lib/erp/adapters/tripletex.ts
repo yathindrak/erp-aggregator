@@ -12,6 +12,8 @@ import { addDays, addMonths, subMonths, isBefore, format } from "date-fns";
 export type TripletexCredentials = {
 	consumerToken?: string;
 	employeeToken?: string;
+	accessToken?: string;
+	expiresAt?: string | number | Date;
 };
 
 interface TripletexInvoice {
@@ -114,56 +116,74 @@ export class TripletexAdapter
 
 	auth = {
 		authenticate: async (
-			credentials: TripletexCredentials & { accessToken?: string },
-		): Promise<string | undefined> => {
-			// If we already have an active session token from our DB, just apply it
-			const activeToken = credentials.accessToken;
-			if (activeToken) {
-				this.api.defaults.auth = { username: "0", password: activeToken };
+			credentials: TripletexCredentials,
+		): Promise<Partial<TripletexCredentials> | string | undefined> => {
+			let { accessToken, expiresAt, consumerToken, employeeToken } = credentials;
+
+			// If we have an active session token, check its validity
+			if (accessToken) {
+				const isExpiringSoon = expiresAt
+					? isBefore(new Date(expiresAt), addDays(new Date(), 7)) // 1 week buffer
+					: false;
+
+				if (expiresAt && !isExpiringSoon) {
+					console.log("[Tripletex] Session token still valid, skipping ping.");
+					this.api.defaults.auth = { username: "0", password: accessToken };
+					return accessToken;
+				}
+
+				// If expiring soon, or no expiresAt stored, check validity with a ping
+				this.api.defaults.auth = { username: "0", password: accessToken };
 				try {
-					// Check if token is still valid. If it's invalid (401), fall through and create a new one.
 					await this.api.get("/token/session/%3EwhoAmI");
-					return activeToken;
+					console.log("[Tripletex] Session token is still valid via ping.");
+					return accessToken;
 				} catch (e: any) {
-					console.log({ e });
 					if (e.response?.status === 401) {
-						console.log(
-							"[Tripletex] Token expired or invalid, creating a new session token.",
-						);
+						console.log("[Tripletex] Token expired or invalid, recreating...");
 						delete this.api.defaults.auth;
 					} else {
-						// Throw other network errors as they occur
 						throw e;
 					}
 				}
 			}
 
-			if (!credentials.consumerToken || !credentials.employeeToken) {
-				throw new Error("Missing credentials");
+			if (!consumerToken || !employeeToken) {
+				throw new Error("Missing client tokens (consumerToken/employeeToken) to create session.");
 			}
 
 			const expirationDate = addMonths(new Date(), 6);
 
-			const response = await this.api.put("/token/session/:create", null, {
-				params: {
-					consumerToken: credentials.consumerToken,
-					employeeToken: credentials.employeeToken,
-					expirationDate: expirationDate.toISOString(),
-				},
-			});
+			try {
+				const response = await this.api.put("/token/session/:create", null, {
+					params: {
+						consumerToken,
+						employeeToken,
+						expirationDate: expirationDate.toISOString(),
+					},
+				});
 
-			const token = response.data?.value?.token;
-			if (!token) {
-				throw new Error("Failed to retrieve Tripletex session token");
+				const token = response.data?.value?.token;
+				if (!token) {
+					throw new Error("Empty session token returned by Tripletex API");
+				}
+
+				// Apply it for all future requests on this adapter instance
+				this.api.defaults.auth = {
+					username: "0",
+					password: token,
+				};
+
+				return {
+					accessToken: token,
+					expiresAt: expirationDate.toISOString(),
+					consumerToken,
+					employeeToken,
+				};
+			} catch (e: any) {
+				console.error("[Tripletex] Auth failed:", e.response?.data || e.message);
+				throw new Error("Tripletex session creation failed. Please check tokens.");
 			}
-
-			// Apply it for all future requests on this adapter instance
-			this.api.defaults.auth = {
-				username: "0",
-				password: token,
-			};
-
-			return token;
 		},
 	};
 

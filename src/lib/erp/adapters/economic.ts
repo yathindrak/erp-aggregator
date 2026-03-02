@@ -13,6 +13,7 @@ import { env } from "@/env";
 export type EconomicCredentials = {
     appSecretToken?: string;
     agreementGrantToken?: string;
+    accessToken?: string; // Combined appToken:grantToken for DB storage
 };
 
 export class EconomicAdapter implements IErpAdapterPlugin<EconomicCredentials> {
@@ -49,11 +50,12 @@ export class EconomicAdapter implements IErpAdapterPlugin<EconomicCredentials> {
 
     auth = {
         authenticate: async (
-            credentials: EconomicCredentials & { accessToken?: string }
-        ): Promise<string | undefined> => {
+            credentials: EconomicCredentials
+        ): Promise<Partial<EconomicCredentials> | string | undefined> => {
             let appToken = credentials.appSecretToken || env.ECONOMIC_APP_SECRET_TOKEN;
             let grantToken = credentials.agreementGrantToken;
 
+            // If we have a combined token, prefer that
             if (credentials.accessToken) {
                 const [token, grant] = credentials.accessToken.split(":");
                 if (token && grant) {
@@ -63,20 +65,33 @@ export class EconomicAdapter implements IErpAdapterPlugin<EconomicCredentials> {
             }
 
             if (!appToken || !grantToken) {
-                throw new Error("Missing e-conomic credentials (appSecretToken and agreementGrantToken) or env variables");
+                throw new Error("Missing e-conomic credentials (appSecretToken and agreementGrantToken)");
             }
 
             this.api.defaults.headers.common["X-AppSecretToken"] = appToken;
             this.api.defaults.headers.common["X-AgreementGrantToken"] = grantToken;
 
             try {
-                // Verify credentials with a simple ping to self / customers
-                await this.api.get("/customers?skipPages=0&pageSize=1");
-                // We use a combined token format "app:grant" so we can easily store/reuse it
-                return `${appToken}:${grantToken}`;
+                // Verify credentials with a simple ping (fetch 1 customer)
+                await this.api.get("/customers", { params: { pageSize: 1 } });
+
+                const combinedToken = `${appToken}:${grantToken}`;
+
+                // If it was already set and matches, just return it so ConnectionManager knows nothing changed
+                if (credentials.accessToken === combinedToken) {
+                    return combinedToken;
+                }
+
+                // Return updated credentials object
+                return {
+                    accessToken: combinedToken,
+                    appSecretToken: appToken,
+                    agreementGrantToken: grantToken,
+                };
             } catch (e: any) {
-                console.error("[Economic] Authentication failed:", e.response?.data || e.message);
-                throw new Error(e.response?.data?.message || "Failed to authenticate with e-conomic");
+                console.error("[Economic] Auth verify failed:", e.response?.data || e.message);
+                const errorMsg = e.response?.data?.message || "Failed to authenticate with e-conomic. Check tokens.";
+                throw new Error(errorMsg);
             }
         },
     };
@@ -171,6 +186,31 @@ export class EconomicAdapter implements IErpAdapterPlugin<EconomicCredentials> {
             const overdue = invoices.filter((i) => i.status === "OVERDUE");
 
             let cashPosition = 0;
+            try {
+                // Fetch accounts with balances directly
+                const accountsRes = await this.api.get("/accounts", {
+                    params: { pageSize: 1000 }
+                });
+                const accs = accountsRes.data?.collection || [];
+
+                // Heuristic to identify bank/cash accounts:
+                // 1. Account type should be 'status' (individual Balance Sheet account)
+                // 2. Name should contain specific bank/cash keywords
+                const bankKeywords = ["bank", "kasse", "cash", "giro", "likvid", "beholdning"];
+                const bankAccounts = accs.filter((a: any) => {
+                    const name = (a.name || "").toLowerCase();
+                    const accType = a.accountType;
+
+                    const isBalanceSheetAccount = accType === "status";
+                    const hasKeyword = bankKeywords.some(k => name.includes(k));
+
+                    return isBalanceSheetAccount && hasKeyword && a.balance !== undefined;
+                });
+
+                cashPosition = bankAccounts.reduce((sum: number, a: any) => sum + (a.balance || 0), 0);
+            } catch (e) {
+                console.error("[Economic] Failed to calculate cash position:", e);
+            }
 
             return {
                 totalAR,
@@ -236,11 +276,16 @@ export class EconomicAdapter implements IErpAdapterPlugin<EconomicCredentials> {
 
             return accs.map((a: any) => {
                 let mappedType: AccountType = "EXPENSE";
-                const t = a.accountType?.toLowerCase() || "";
-                if (t.includes("asset")) mappedType = "ASSET";
-                else if (t.includes("liabilit") || t.includes("status")) mappedType = "LIABILITY";
-                else if (t.includes("equity")) mappedType = "EQUITY";
-                else if (t.includes("profit") || t.includes("revenue") || t.includes("sales")) mappedType = "REVENUE";
+                const t = a.accountType;
+                const accNum = Number(a.accountNumber);
+
+                if (t === "profitAndLoss") {
+                    // Standard e-conomic P&L: Revenue is usually < 2000, Expenses > 2000
+                    mappedType = accNum < 2000 ? "REVENUE" : "EXPENSE";
+                } else if (t === "status") {
+                    // Standard e-conomic Balance Sheet: Assets < 6000, Liabilities/Equity > 6000
+                    mappedType = accNum < 6000 ? "ASSET" : "LIABILITY";
+                }
 
                 return {
                     id: String(a.accountNumber),

@@ -21,6 +21,5 @@ export const getDashboard = actionClient
 		}
 
 		const data = await getDashboardData(clientId);
-		console.log({ data })
 		return data ?? { error: "No dashboard data available" };
 	});

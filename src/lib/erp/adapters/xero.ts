@@ -7,7 +7,7 @@ import type {
 	AccountType,
 } from "../models/canonical";
 import axios, { type AxiosInstance } from "axios";
-import { isBefore, formatISO } from "date-fns";
+import { isBefore, formatISO, addMinutes, addSeconds } from "date-fns";
 import { env } from "@/env";
 
 const parseXeroDate = (dateString?: string): string => {
@@ -109,13 +109,15 @@ export class XeroAdapter implements IErpAdapterPlugin<XeroCredentials> {
 		): Promise<Partial<XeroCredentials> | string | undefined> => {
 			let { accessToken, refreshToken, expiresAt, tenantId } = credentials;
 
-			if (refreshToken && expiresAt) {
-				const expiryDate = new Date(expiresAt).getTime();
-				const now = Date.now();
-				const buffer = 5 * 60 * 1000; // 5 minutes
+			// If we have a refresh token, check if we need to refresh
+			if (refreshToken) {
+				const isExpiredOrExpiringSoon = expiresAt
+					? isBefore(new Date(expiresAt), addMinutes(new Date(), 5))
+					: true;
 
-				if (now >= expiryDate - buffer) {
-					console.log("[XeroAdapter] Token expired or expiring soon, refreshing...");
+				// Refresh if we don't know the expiration OR it's expiring/expired
+				if (isExpiredOrExpiringSoon) {
+					console.log(`[XeroAdapter] ${!expiresAt ? "Expiration unknown" : "Token expired/expiring soon"}, refreshing...`);
 					const clientId = env.XERO_CLIENT_ID;
 					const clientSecret = env.XERO_CLIENT_SECRET;
 
@@ -138,7 +140,7 @@ export class XeroAdapter implements IErpAdapterPlugin<XeroCredentials> {
 						accessToken = response.data.access_token;
 						refreshToken = response.data.refresh_token || refreshToken;
 						const expiresIn = response.data.expires_in || 1800;
-						expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
+						expiresAt = addSeconds(new Date(), expiresIn).toISOString();
 
 						// Apply new token to active requests immediately
 						if (accessToken) {

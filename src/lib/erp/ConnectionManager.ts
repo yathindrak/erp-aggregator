@@ -32,18 +32,12 @@ export class ConnectionManager {
 			throw new Error(`Unsupported ERP: "${erpName}"`);
 		}
 
-		// We enforce that a client can only be connected to max 1 ERP at a time for simplicity.
-		const existingConnections = await this.getAllConnections(clientId);
-		if (existingConnections.length > 0) {
-			const hasOtherErp = existingConnections.some(
-				(c) => c.erpName !== erpName,
-			);
-			if (hasOtherErp) {
-				const connectedErpName = existingConnections[0]?.erpName;
-				throw new Error(
-					`Client is already connected to ${connectedErpName}. A client can only have one active ERP connection.`,
-				);
-			}
+		const existing = await this.db.connection.findUnique({
+			where: { clientId },
+		});
+
+		if (existing && existing.erpName !== erpName) {
+			await this.db.connection.delete({ where: { clientId } });
 		}
 
 		const adapter = this.registry.create(erpName);
@@ -69,13 +63,14 @@ export class ConnectionManager {
 		const encryptedCredentials = encryptBlob(finalCredentials);
 
 		return this.db.connection.upsert({
-			where: { clientId_erpName: { clientId, erpName } },
+			where: { clientId },
 			update: {
+				erpName,
 				credentials: encryptedCredentials
 					? JSON.stringify(encryptedCredentials)
 					: undefined,
-				tokenExpiresAt: credentials.expiresAt
-					? new Date(credentials.expiresAt)
+				tokenExpiresAt: finalCredentials.expiresAt
+					? new Date(finalCredentials.expiresAt as string | number | Date)
 					: null,
 			},
 			create: {
@@ -84,16 +79,16 @@ export class ConnectionManager {
 				credentials: encryptedCredentials
 					? JSON.stringify(encryptedCredentials)
 					: undefined,
-				tokenExpiresAt: credentials.expiresAt
-					? new Date(credentials.expiresAt)
+				tokenExpiresAt: finalCredentials.expiresAt
+					? new Date(finalCredentials.expiresAt as string | number | Date)
 					: null,
 			},
 		});
 	}
 
-	async getConnection(clientId: string, erpName: string) {
+	async getConnection(clientId: string) {
 		return this.db.connection.findUnique({
-			where: { clientId_erpName: { clientId, erpName } },
+			where: { clientId },
 		});
 	}
 
@@ -101,9 +96,9 @@ export class ConnectionManager {
 		return this.db.connection.findMany({ where: { clientId } });
 	}
 
-	async deleteConnection(clientId: string, erpName: string) {
+	async deleteConnection(clientId: string) {
 		return this.db.connection.delete({
-			where: { clientId_erpName: { clientId, erpName } },
+			where: { clientId },
 		});
 	}
 
@@ -112,9 +107,9 @@ export class ConnectionManager {
 	 */
 	async getAdapter(
 		clientId: string,
-		erpName: string,
+		erpName?: string, // No longer strictly needed but kept for backward compatibility
 	): Promise<IErpAdapterPlugin> {
-		const connection = await this.getConnection(clientId, erpName);
+		const connection = await this.getConnection(clientId);
 
 		if (!connection) {
 			throw new Error(

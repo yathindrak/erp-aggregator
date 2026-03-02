@@ -21,7 +21,7 @@ model Client {
 /// Link between a client and their active ERP credentials
 model Connection {
     id       String @id @default(uuid())
-    clientId String
+    clientId String @unique
 
     /// String instead of Enum to allow dynamic adapter additions without DB migrations
     erpName String // e.g., 'tripletex'
@@ -34,8 +34,6 @@ model Connection {
     updatedAt DateTime @updatedAt
 
     client Client @relation(fields: [clientId], references: [id])
-
-    @@unique([clientId, erpName])
 }
 
 /// Computed metrics for the dashboard

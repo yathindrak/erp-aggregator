@@ -34,11 +34,13 @@ function AdapterCard({
 	isConnected,
 	clientId,
 	onSuccess,
+	isLocked,
 }: {
 	adapter: ErpMetadata;
 	isConnected: boolean;
 	clientId: string;
 	onSuccess: () => void;
+	isLocked: boolean;
 }) {
 	const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
 	const [loading, setLoading] = useState(false);
@@ -112,6 +114,7 @@ function AdapterCard({
 			className={cn(
 				"border-border/40 transition-all duration-200",
 				isConnected && "border-emerald-500/30",
+				isLocked && "opacity-60 grayscale-[0.5] select-none",
 			)}
 		>
 			<CardHeader className="pb-3">
@@ -138,6 +141,10 @@ function AdapterCard({
 							<Badge className="gap-1 border-emerald-500/30 bg-emerald-500/15 text-emerald-400 text-xs hover:bg-emerald-500/15">
 								<IconCheck className="h-3 w-3" />
 								Connected
+							</Badge>
+						) : isLocked ? (
+							<Badge className="gap-1 text-xs" variant="outline">
+								Locked
 							</Badge>
 						) : (
 							<Badge className="gap-1 text-xs" variant="secondary">
@@ -170,6 +177,12 @@ function AdapterCard({
 								"Disconnect"
 							)}
 						</Button>
+					</div>
+				) : isLocked ? (
+					<div className="rounded-lg border border-border/40 bg-muted/10 p-4">
+						<p className="text-center text-muted-foreground text-xs">
+							Disconnect current ERP to switch to {adapter.name}
+						</p>
 					</div>
 				) : adapter.authConfig?.fields?.length ? (
 					<div className="space-y-3 rounded-lg border border-border/40 bg-muted/20 p-4">
@@ -342,11 +355,16 @@ export default function ConnectionsPage() {
 				<div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
 					{adapters.map((adapter) => {
 						const conn = connections.find((c) => c.erpName === adapter.id);
+						const isConnected = !!conn?.hasToken;
+						const isAnyConnected = connections.some((c) => c.hasToken);
+						const isLocked = isAnyConnected && !isConnected;
+
 						return (
 							<AdapterCard
 								adapter={adapter}
 								clientId={clientId}
-								isConnected={!!conn?.hasToken}
+								isConnected={isConnected}
+								isLocked={isLocked}
 								key={adapter.id}
 								onSuccess={handleSuccess}
 							/>

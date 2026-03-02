@@ -42,7 +42,7 @@ export const connectErp = actionClient
 
 export const deleteConnection = actionClient
 	.inputSchema(deleteConnectionSchema)
-	.action(async ({ parsedInput: { clientId, erpName } }) => {
-		await connectionManager.deleteConnection(clientId, erpName);
+	.action(async ({ parsedInput: { clientId } }) => {
+		await connectionManager.deleteConnection(clientId);
 		return { success: true };
 	});
