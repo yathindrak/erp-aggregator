@@ -49,13 +49,9 @@ Once registered in `src/lib/erp/adapters/AdapterRegistry.ts`, the new ERP is aut
 
 ## Resilience & Scalability
 
-### Scalability
 Since the dashboard is scoped per-client (where each client maps to exactly one ERP connection), the frontend doesn't attempt to fetch multiple clients concurrently. This prevents single-request bottlenecks and overwhelming API calls on load.
 
-However, when the daily cron job refreshes metrics for 40 clients across 4 different ERPs simultaneously, it makes parallel requests. 
-
-- **Optional Interfaces (Capability Gaps):** Some features in `IErpAdapterPlugin` are optional. If an ERP lacks a Payments API, the adapter omits it and the platform falls back gracefully, showing empty states rather than breaking. 
-- **Partial Failures:** Because of the isolated try-catch blocks, if one ERP provider's API goes down entirely (or one client's token expires), the refresh job continues. Data for clients on other providers still updates successfully without failing the entire batch process.
+- **Optional Interfaces (Capability Gaps):** Some features in `IErpAdapterPlugin` are optional. If an ERP lacks a Payments API, the adapter omits it and the platform falls back gracefully, showing empty states rather than breaking.
 - **Rate Limiting & Retries:** Vendor-specific rate limits are handled via a centralized API client utility using Axios interceptors, enabling retry with backoff for 429 errors. If retries are exhausted, the utility will `return Promise.reject(new ErpRateLimitError());` to ensure a consistent error experience across all adapters.
 
 ## Project Scope & Limitations
