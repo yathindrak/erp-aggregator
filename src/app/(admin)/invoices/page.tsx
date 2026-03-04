@@ -14,7 +14,7 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import type { CanonicalInvoice } from "@/lib/erp/models/canonical";
-import { fmtNumber, statusBadgeVariant } from "@/lib/format";
+import { fmtNumber, statusBadgeVariant, fmtDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 export default function InvoicesPage() {
@@ -175,10 +175,10 @@ export default function InvoicesPage() {
 										</Badge>
 									</TableCell>
 									<TableCell className="text-sm">
-										{inv.issueDate ?? "—"}
+										{fmtDate(inv.issueDate)}
 									</TableCell>
 									<TableCell className="text-sm">
-										{inv.dueDate ?? "—"}
+										{fmtDate(inv.dueDate)}
 									</TableCell>
 									<TableCell className="text-muted-foreground text-sm">
 										{inv.currency ?? "—"}

@@ -12,7 +12,7 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import type { CanonicalPayment } from "@/lib/erp/models/canonical";
-import { fmtNumber } from "@/lib/format";
+import { fmtNumber, fmtDate } from "@/lib/format";
 
 export default function PaymentsPage() {
     const { clientId } = useWorkspace();
@@ -124,7 +124,7 @@ export default function PaymentsPage() {
                                         {p.id}
                                     </TableCell>
                                     <TableCell className="text-sm">
-                                        {p.date ?? "—"}
+                                        {fmtDate(p.date)}
                                     </TableCell>
                                     <TableCell className="font-semibold text-sm">
                                         {fmtNumber(p.amount)}

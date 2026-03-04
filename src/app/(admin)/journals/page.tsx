@@ -18,7 +18,7 @@ import {
 } from "@tabler/icons-react";
 import type { CanonicalJournalEntry } from "@/lib/erp/models/canonical";
 import { cn } from "@/lib/utils";
-import { fmtNumber } from "@/lib/format";
+import { fmtNumber, fmtDate } from "@/lib/format";
 
 export default function JournalsPage() {
 	const { clientId } = useWorkspace();
@@ -119,7 +119,7 @@ export default function JournalsPage() {
 											<TableCell className="font-mono text-muted-foreground text-xs">
 												{j.id}
 											</TableCell>
-											<TableCell className="text-sm">{j.date ?? "—"}</TableCell>
+											<TableCell className="text-sm">{fmtDate(j.date)}</TableCell>
 											<TableCell className="max-w-[300px] truncate text-sm">
 												{j.description ?? "—"}
 											</TableCell>

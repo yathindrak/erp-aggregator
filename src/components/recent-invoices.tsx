@@ -11,7 +11,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { CanonicalInvoice } from "@/lib/erp/models/canonical";
-import { fmtNumber, statusBadgeVariant } from "@/lib/format";
+import { fmtNumber, statusBadgeVariant, fmtDate } from "@/lib/format";
 
 export function RecentInvoices({
     invoices,
@@ -149,7 +149,7 @@ export function RecentInvoices({
                                         </Badge>
                                     </TableCell>
                                     <TableCell className="text-sm">
-                                        {inv.dueDate ?? "—"}
+                                        {fmtDate(inv.dueDate)}
                                     </TableCell>
                                     <TableCell className="text-right font-semibold text-sm">
                                         {fmtNumber(inv.totalAmount)}
