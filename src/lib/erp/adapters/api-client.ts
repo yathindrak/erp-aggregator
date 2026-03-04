@@ -1,4 +1,5 @@
 import axios, { type AxiosInstance, type AxiosRequestConfig } from "axios";
+import { ErpRateLimitError, ErpAuthError } from "../../api-utils";
 
 export function createApiClient(config: AxiosRequestConfig): AxiosInstance {
     const instance = axios.create(config);
@@ -21,6 +22,11 @@ export function createApiClient(config: AxiosRequestConfig): AxiosInstance {
 
                     return instance(config);
                 }
+                return Promise.reject(new ErpRateLimitError());
+            }
+
+            if (response && response.status === 401) {
+                return Promise.reject(new ErpAuthError());
             }
 
             return Promise.reject(error);

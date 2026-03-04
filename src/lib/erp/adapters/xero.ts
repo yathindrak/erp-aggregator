@@ -10,6 +10,7 @@ import type {
 import axios, { type AxiosInstance } from "axios";
 import { isBefore, formatISO, addMinutes, addSeconds } from "date-fns";
 import { env } from "@/env";
+import { ErpAuthError } from "../../api-utils";
 import { createApiClient } from "./api-client";
 
 const parseXeroDate = (dateString?: string): string => {
@@ -170,7 +171,7 @@ export class XeroAdapter implements IErpAdapterPlugin<XeroCredentials> {
 						};
 					} catch (e: any) {
 						console.error("[XeroAdapter] Token refresh failed:", e.response?.data || e.message);
-						throw new Error("Xero token refresh failed. Please reconnect.");
+						throw new ErpAuthError("Xero token refresh failed. Please reconnect.");
 					}
 				}
 			}

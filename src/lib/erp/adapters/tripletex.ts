@@ -8,6 +8,7 @@ import type {
 } from "../models/canonical";
 import { type AxiosInstance } from "axios";
 import { addDays, addMonths, subMonths, isBefore, format } from "date-fns";
+import { ErpAuthError } from "../../api-utils";
 import { createApiClient } from "./api-client";
 
 export type TripletexCredentials = {
@@ -140,7 +141,7 @@ export class TripletexAdapter
 					console.log("[Tripletex] Session token is still valid via ping.");
 					return accessToken;
 				} catch (e: any) {
-					if (e.response?.status === 401) {
+					if (e instanceof ErpAuthError || e.response?.status === 401) {
 						console.log("[Tripletex] Token expired or invalid, recreating...");
 						delete this.api.defaults.auth;
 					} else {
@@ -183,7 +184,7 @@ export class TripletexAdapter
 				};
 			} catch (e: any) {
 				console.error("[Tripletex] Auth failed:", e.response?.data || e.message);
-				throw new Error("Tripletex session creation failed. Please check tokens.");
+				throw new ErpAuthError("Tripletex session creation failed. Please check tokens.");
 			}
 		},
 	};

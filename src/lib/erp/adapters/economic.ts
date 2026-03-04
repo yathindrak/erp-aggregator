@@ -9,6 +9,7 @@ import type {
 import { type AxiosInstance } from "axios";
 import { isBefore } from "date-fns";
 import { env } from "@/env";
+import { ErpAuthError } from "../../api-utils";
 import { createApiClient } from "./api-client";
 
 export type EconomicCredentials = {
@@ -91,8 +92,8 @@ export class EconomicAdapter implements IErpAdapterPlugin<EconomicCredentials> {
                 };
             } catch (e: any) {
                 console.error("[Economic] Auth verify failed:", e.response?.data || e.message);
-                const errorMsg = e.response?.data?.message || "Failed to authenticate with e-conomic. Check tokens.";
-                throw new Error(errorMsg);
+                const errorMsg = e instanceof ErpAuthError ? e.message : (e.response?.data?.message || "Failed to authenticate with e-conomic. Check tokens.");
+                throw new ErpAuthError(errorMsg);
             }
         },
     };

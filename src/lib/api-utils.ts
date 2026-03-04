@@ -11,6 +11,20 @@ export class ApiError extends Error {
     }
 }
 
+export class ErpAuthError extends ApiError {
+    constructor(message: string = "ERP connection expired. Please reconnect.") {
+        super(message, 401, "AUTH_EXPIRED");
+        this.name = "ErpAuthError";
+    }
+}
+
+export class ErpRateLimitError extends ApiError {
+    constructor(message: string = "Too many requests to the ERP provider.") {
+        super(message, 429, "RATE_LIMITED");
+        this.name = "ErpRateLimitError";
+    }
+}
+
 export async function withErrorHandler(handler: () => Promise<Response>) {
     try {
         return await handler();
@@ -21,21 +35,6 @@ export async function withErrorHandler(handler: () => Promise<Response>) {
             return NextResponse.json(
                 { error: error.message, code: error.code },
                 { status: error.status }
-            );
-        }
-
-        // Handle specific ERP errors if possible
-        if (error.message?.includes("token refresh failed")) {
-            return NextResponse.json(
-                { error: "ERP connection expired. Please reconnect.", code: "AUTH_EXPIRED" },
-                { status: 401 }
-            );
-        }
-
-        if (error.message?.includes("rate limit")) {
-            return NextResponse.json(
-                { error: "Too many requests to the ERP provider.", code: "RATE_LIMITED" },
-                { status: 429 }
             );
         }
 
