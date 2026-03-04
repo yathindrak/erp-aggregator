@@ -21,7 +21,7 @@ export default function InvoicesPage() {
 	const { clientId } = useWorkspace();
 	const [invoices, setInvoices] = useState<CanonicalInvoice[]>([]);
 	const [loading, setLoading] = useState(false);
-	const [filter, setFilter] = useState<"all" | "UNPAID" | "OVERDUE">("all");
+	const [filter, setFilter] = useState<"all" | "UNPAID" | "OVERDUE" | "PAID">("all");
 
 	const load = useCallback(async () => {
 		if (!clientId) return;
@@ -87,6 +87,13 @@ export default function InvoicesPage() {
 					>
 						Overdue
 					</TabsTrigger>
+					<TabsTrigger
+						className="px-3 text-xs"
+						id="invoices-tab-paid"
+						value="PAID"
+					>
+						Paid
+					</TabsTrigger>
 				</TabsList>
 			</Tabs>
 
@@ -130,7 +137,7 @@ export default function InvoicesPage() {
 									className="py-12 text-center text-muted-foreground text-sm"
 									colSpan={8}
 								>
-									No invoices found. Please connect an ERP first.
+									No invoices found.
 								</TableCell>
 							</TableRow>
 

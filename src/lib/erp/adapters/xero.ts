@@ -187,21 +187,21 @@ export class XeroAdapter implements IErpAdapterPlugin<XeroCredentials> {
 		},
 	};
 
-	invoices = {
+	invoicesRecievable = {
 		fetch: async ({
 			status,
 			startDate,
 			endDate,
 		}: {
-			status?: "UNPAID" | "OVERDUE";
+			status?: "UNPAID" | "OVERDUE" | "PAID";
 			startDate?: string;
 			endDate?: string;
 		} = {}): Promise<CanonicalInvoice[]> => {
-			let whereClause = "";
-
-			// Status in Xero: DRAFT, SUBMITTED, DELETED, AUTHORISED, PAID, VOIDED
+			let whereClause = 'Type=="ACCREC"';
 			if (status === "UNPAID") {
-				whereClause = 'Status=="AUTHORISED"';
+				whereClause += ' AND Status=="AUTHORISED"';
+			} else if (status === "PAID") {
+				whereClause += ' AND Status=="PAID"';
 			}
 
 			const { data } = await this.api.get("/Invoices", {
@@ -209,52 +209,53 @@ export class XeroAdapter implements IErpAdapterPlugin<XeroCredentials> {
 			});
 			const invoices: XeroInvoice[] = data.Invoices || [];
 
-			const all = invoices.map((inv: XeroInvoice): CanonicalInvoice => {
-				let isOverdue = false;
-				const dueDateValue = parseXeroDate(inv.DueDateString || inv.DueDate);
-				const issueDateValue = parseXeroDate(inv.DateString || inv.Date);
-				if (dueDateValue) {
-					isOverdue =
-						isBefore(new Date(dueDateValue), new Date()) && inv.AmountDue > 0;
-				}
+			const all = invoices.map(this.mapXeroInvoice);
 
-				let mappedStatus: CanonicalInvoice["status"] = "PAID";
+			if (status === "OVERDUE") return all.filter((i) => i.status === "OVERDUE");
+			if (status === "UNPAID") return all.filter((i) => i.status === "UNPAID");
+			if (status === "PAID") return all.filter((i) => i.status === "PAID");
+			return all;
+		},
+	};
 
-				if (inv.Status === "DRAFT") mappedStatus = "DRAFT";
-				else if (inv.Status === "DELETED" || inv.Status === "VOIDED")
-					mappedStatus = "VOIDED";
-				else if (inv.Status === "AUTHORISED")
-					mappedStatus = isOverdue ? "OVERDUE" : "UNPAID";
-
-				const invoice: CanonicalInvoice = {
-					id: String(inv.InvoiceID),
-					type: inv.Type === "ACCPAY" ? "AP" : "AR", // Accounts Payable vs Accounts Receivable
-					status: mappedStatus,
-					issueDate: issueDateValue || "",
-					dueDate: dueDateValue || "",
-					currency: inv.CurrencyCode || "GBP",
-					totalAmount: inv.Total,
-					openAmount: inv.AmountDue,
-					contactId: String(inv.Contact?.ContactID),
-				};
-
-				return invoice;
-			});
-
-			if (status === "OVERDUE") {
-				return all.filter((i) => i.status === "OVERDUE");
-			}
+	invoicesPayable = {
+		fetch: async ({
+			status,
+			startDate,
+			endDate,
+		}: {
+			status?: "UNPAID" | "OVERDUE" | "PAID";
+			startDate?: string;
+			endDate?: string;
+		} = {}): Promise<CanonicalInvoice[]> => {
+			let whereClause = 'Type=="ACCPAY"';
 			if (status === "UNPAID") {
-				return all.filter((i) => i.status === "UNPAID");
+				whereClause += ' AND Status=="AUTHORISED"';
+			} else if (status === "PAID") {
+				whereClause += ' AND Status=="PAID"';
 			}
 
+			const { data } = await this.api.get("/Invoices", {
+				params: { Where: whereClause },
+			});
+			const invoices: XeroInvoice[] = data.Invoices || [];
+
+			const all = invoices.map(this.mapXeroInvoice);
+
+			if (status === "OVERDUE") return all.filter((i) => i.status === "OVERDUE");
+			if (status === "UNPAID") return all.filter((i) => i.status === "UNPAID");
+			if (status === "PAID") return all.filter((i) => i.status === "PAID");
 			return all;
 		},
 	};
 
 	dashboard = {
 		getMetrics: async () => {
-			const invoices = await this.invoices.fetch();
+			const [recInvoices, payInvoices] = await Promise.all([
+				this.invoicesRecievable.fetch(),
+				this.invoicesPayable.fetch(),
+			]);
+			const allInvoices = [...recInvoices, ...payInvoices];
 
 			const reports = await this.api.get("/Reports/BankSummary", {
 				validateStatus: () => true,
@@ -279,15 +280,15 @@ export class XeroAdapter implements IErpAdapterPlugin<XeroCredentials> {
 				}
 			} catch (_e) { }
 
-			const totalAR = invoices
-				.filter((i) => i.type === "AR" && i.openAmount > 0)
+			const totalAR = recInvoices
+				.filter((i) => i.openAmount > 0)
 				.reduce((sum, i) => sum + i.openAmount, 0);
 
-			const totalAP = invoices
-				.filter((i) => i.type === "AP" && i.openAmount > 0)
+			const totalAP = payInvoices
+				.filter((i) => i.openAmount > 0)
 				.reduce((sum, i) => sum + i.openAmount, 0);
 
-			const overdue = invoices.filter((i) => i.status === "OVERDUE");
+			const overdue = allInvoices.filter((i) => i.status === "OVERDUE");
 
 			return {
 				totalAR,
@@ -298,6 +299,36 @@ export class XeroAdapter implements IErpAdapterPlugin<XeroCredentials> {
 				cashPosition,
 			};
 		},
+	};
+
+	private mapXeroInvoice = (inv: XeroInvoice): CanonicalInvoice => {
+		let isOverdue = false;
+		const dueDateValue = parseXeroDate(inv.DueDateString || inv.DueDate);
+		const issueDateValue = parseXeroDate(inv.DateString || inv.Date);
+		if (dueDateValue) {
+			isOverdue =
+				isBefore(new Date(dueDateValue), new Date()) && inv.AmountDue > 0;
+		}
+
+		let mappedStatus: CanonicalInvoice["status"] = "PAID";
+
+		if (inv.Status === "DRAFT") mappedStatus = "DRAFT";
+		else if (inv.Status === "DELETED" || inv.Status === "VOIDED")
+			mappedStatus = "VOIDED";
+		else if (inv.Status === "AUTHORISED")
+			mappedStatus = isOverdue ? "OVERDUE" : "UNPAID";
+
+		return {
+			id: String(inv.InvoiceID),
+			type: inv.Type === "ACCPAY" ? "AP" : "AR",
+			status: mappedStatus,
+			issueDate: issueDateValue || "",
+			dueDate: dueDateValue || "",
+			currency: inv.CurrencyCode || "GBP",
+			totalAmount: inv.Total,
+			openAmount: inv.AmountDue,
+			contactId: String(inv.Contact?.ContactID),
+		};
 	};
 
 	contacts = {

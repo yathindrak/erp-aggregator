@@ -189,122 +189,133 @@ export class TripletexAdapter
 		},
 	};
 
-	invoices = {
+	invoicesRecievable = {
 		fetch: async ({
 			status,
 			startDate,
 			endDate,
 		}: {
-			status?: "UNPAID" | "OVERDUE";
+			status?: "UNPAID" | "OVERDUE" | "PAID";
 			startDate?: string;
 			endDate?: string;
 		} = {}): Promise<CanonicalInvoice[]> => {
 			const { from, to } = dateRange(startDate, endDate);
-
 			const params = {
 				count: 1000,
 				invoiceDateFrom: from,
 				invoiceDateTo: to,
-			};
-
-			const arParams: Record<string, string | number | boolean> = {
-				...params,
-				fields: "*,currency(id,code)",
-			};
-			const apParams: Record<string, string | number | boolean> = {
-				...params,
 				fields: "*,currency(id,code)",
 			};
 
-			// Fetch AR and AP in parallel — AP degrades gracefully if the module isn't enabled
-			const [arData, apData] = await Promise.all([
-				this.api
-					.get<{ values: TripletexInvoice[] }>("/invoice", { params: arParams })
-					.then((r) => r.data.values || [])
-					.catch(() => []),
-				this.api
-					.get<{ values: TripletexInvoice[] }>("/supplierInvoice", {
-						params: apParams,
-					})
-					.then((r) => r.data.values || [])
-					.catch(() => []),
-			]);
+			const data = await this.api
+				.get<{ values: TripletexInvoice[] }>("/invoice", { params })
+				.then((r) => r.data.values || [])
+				.catch(() => []);
 
-			const mapAR = (inv: TripletexInvoice): CanonicalInvoice => {
-				const openAmt =
-					inv.amountCurrencyOutstanding ?? inv.amountOutstanding ?? 0;
-				const isOverdue =
-					inv.invoiceDueDate &&
-					isBefore(new Date(inv.invoiceDueDate), new Date()) &&
-					openAmt > 0;
-				let mappedStatus: CanonicalInvoice["status"] = "PAID";
-				if (openAmt > 0) mappedStatus = isOverdue ? "OVERDUE" : "UNPAID";
-				const invoice: CanonicalInvoice = {
-					id: String(inv.id),
-					type: "AR",
-					status: mappedStatus,
-					issueDate: inv.invoiceDate,
-					dueDate: inv.invoiceDueDate || "",
-					currency: inv.currency?.code || "NOK",
-					totalAmount: inv.amountCurrency ?? inv.amount ?? 0,
-					openAmount: openAmt,
-					contactId: String(inv.customer?.id),
-				};
-				return invoice;
-			};
+			const all = data.map(this.mapTripletexAR);
 
-			const mapAP = (inv: TripletexInvoice): CanonicalInvoice => {
-				const openAmt =
-					inv.outstandingAmount ?? Math.abs(inv.amountCurrency ?? 0);
-				const dueDate = inv.invoiceDueDate;
-				const isOverdue =
-					dueDate && isBefore(new Date(dueDate), new Date()) && openAmt > 0;
-				const mappedStatus: CanonicalInvoice["status"] =
-					openAmt > 0 ? (isOverdue ? "OVERDUE" : "UNPAID") : "PAID";
-				const invoice: CanonicalInvoice = {
-					id: String(inv.id),
-					type: "AP",
-					status: mappedStatus,
-					issueDate: inv.invoiceDate,
-					dueDate: dueDate || "",
-					currency: inv.currency?.code || "NOK",
-					totalAmount: Math.abs(inv.amountCurrency ?? inv.amount ?? 0),
-					openAmount: openAmt,
-					contactId: String(inv.supplier?.id),
-				};
-
-				return invoice;
-			};
-
-			const all: CanonicalInvoice[] = [
-				...arData.map(mapAR),
-				...apData.map(mapAP),
-			];
-
-			if (status === "OVERDUE")
-				return all.filter((i) => i.status === "OVERDUE");
+			if (status === "OVERDUE") return all.filter((i) => i.status === "OVERDUE");
 			if (status === "UNPAID") return all.filter((i) => i.status === "UNPAID");
+			if (status === "PAID") return all.filter((i) => i.status === "PAID");
 			return all;
 		},
 	};
+
+	invoicesPayable = {
+		fetch: async ({
+			status,
+			startDate,
+			endDate,
+		}: {
+			status?: "UNPAID" | "OVERDUE" | "PAID";
+			startDate?: string;
+			endDate?: string;
+		} = {}): Promise<CanonicalInvoice[]> => {
+			const { from, to } = dateRange(startDate, endDate);
+			const params = {
+				count: 1000,
+				invoiceDateFrom: from,
+				invoiceDateTo: to,
+				fields: "*,currency(id,code)",
+			};
+
+			const data = await this.api
+				.get<{ values: TripletexInvoice[] }>("/supplierInvoice", { params })
+				.then((r) => r.data.values || [])
+				.catch(() => []);
+
+			const all = data.map(this.mapTripletexAP);
+
+			if (status === "OVERDUE") return all.filter((i) => i.status === "OVERDUE");
+			if (status === "UNPAID") return all.filter((i) => i.status === "UNPAID");
+			if (status === "PAID") return all.filter((i) => i.status === "PAID");
+			return all;
+		},
+	};
+
+	private mapTripletexAR = (inv: TripletexInvoice): CanonicalInvoice => {
+		const openAmt = inv.amountCurrencyOutstanding ?? inv.amountOutstanding ?? 0;
+		const isOverdue =
+			inv.invoiceDueDate &&
+			isBefore(new Date(inv.invoiceDueDate), new Date()) &&
+			openAmt > 0;
+		let mappedStatus: CanonicalInvoice["status"] = "PAID";
+		if (openAmt > 0) mappedStatus = isOverdue ? "OVERDUE" : "UNPAID";
+		return {
+			id: String(inv.id),
+			type: "AR",
+			status: mappedStatus,
+			issueDate: inv.invoiceDate,
+			dueDate: inv.invoiceDueDate || "",
+			currency: inv.currency?.code || "NOK",
+			totalAmount: inv.amountCurrency ?? inv.amount ?? 0,
+			openAmount: openAmt,
+			contactId: String(inv.customer?.id),
+		};
+	};
+
+	private mapTripletexAP = (inv: TripletexInvoice): CanonicalInvoice => {
+		const openAmt = inv.outstandingAmount ?? Math.abs(inv.amountCurrency ?? 0);
+		const dueDate = inv.invoiceDueDate;
+		const isOverdue =
+			dueDate && isBefore(new Date(dueDate), new Date()) && openAmt > 0;
+		const mappedStatus: CanonicalInvoice["status"] =
+			openAmt > 0 ? (isOverdue ? "OVERDUE" : "UNPAID") : "PAID";
+		return {
+			id: String(inv.id),
+			type: "AP",
+			status: mappedStatus,
+			issueDate: inv.invoiceDate,
+			dueDate: dueDate || "",
+			currency: inv.currency?.code || "NOK",
+			totalAmount: Math.abs(inv.amountCurrency ?? inv.amount ?? 0),
+			openAmount: openAmt,
+			contactId: String(inv.supplier?.id),
+		};
+	};
+
 
 	dashboard = {
 		getMetrics: async () => {
 			// To ensure dashboard numbers match the invoice lists exactly, we sum up open amounts
 			// directly from the invoice records rather than relying on /ledger/openPost.
-			const invoices = await this.invoices.fetch();
+			const [arInvoices, apInvoices] = await Promise.all([
+				this.invoicesRecievable.fetch(),
+				this.invoicesPayable.fetch(),
+			]);
+			const allInvoices = [...arInvoices, ...apInvoices];
 
-			console.log("[Tripletex] Invoices:", JSON.stringify(invoices, null, 2));
+			console.log("[Tripletex] Invoices Count:", allInvoices.length);
 
-			const totalAR = invoices
-				.filter((i) => i.type === "AR" && i.openAmount > 0)
-				.reduce((sum, i) => sum + i.openAmount, 0);
+			const totalAR = arInvoices
+				.filter((i: CanonicalInvoice) => i.openAmount > 0)
+				.reduce((sum: number, i: CanonicalInvoice) => sum + i.openAmount, 0);
 
-			const totalAP = invoices
-				.filter((i) => i.type === "AP" && i.openAmount > 0)
-				.reduce((sum, i) => sum + i.openAmount, 0);
+			const totalAP = apInvoices
+				.filter((i: CanonicalInvoice) => i.openAmount > 0)
+				.reduce((sum: number, i: CanonicalInvoice) => sum + i.openAmount, 0);
 
-			const overdue = invoices.filter((i) => i.status === "OVERDUE");
+			const overdue = allInvoices.filter((i: CanonicalInvoice) => i.status === "OVERDUE");
 
 			let cashPosition = 0;
 			try {
@@ -319,7 +330,7 @@ export class TripletexAdapter
 				totalAP,
 
 				overdueCount: overdue.length,
-				overdueTotal: overdue.reduce((acc, inv) => acc + inv.openAmount, 0),
+				overdueTotal: overdue.reduce((acc: number, inv: CanonicalInvoice) => acc + inv.openAmount, 0),
 				cashPosition,
 			};
 		},

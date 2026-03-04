@@ -10,8 +10,8 @@ export async function GET(
     const url = new URL(req.url);
     const statusStr = url.searchParams.get("status")?.toUpperCase();
 
-    let status: "UNPAID" | "OVERDUE" | undefined = undefined;
-    if (statusStr === "UNPAID" || statusStr === "OVERDUE") {
+    let status: "UNPAID" | "OVERDUE" | "PAID" | undefined = undefined;
+    if (statusStr === "UNPAID" || statusStr === "OVERDUE" || statusStr === "PAID") {
         status = statusStr;
     }
 
@@ -32,8 +32,11 @@ export async function GET(
         const allInvoices = await Promise.all(
             connections.map(async (conn) => {
                 const adapter = await connectionManager.getAdapter(clientId, conn.erpName);
-                if (!adapter.invoices) return [];
-                return await adapter.invoices.fetch(status ? { status } : undefined);
+                const [rec, pay] = await Promise.all([
+                    adapter.invoicesRecievable?.fetch(status ? { status } : undefined) ?? Promise.resolve([]),
+                    adapter.invoicesPayable?.fetch(status ? { status } : undefined) ?? Promise.resolve([]),
+                ]);
+                return [...rec, ...pay];
             })
         );
 

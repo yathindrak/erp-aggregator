@@ -4,6 +4,7 @@ import type {
 	CanonicalAccount,
 	CanonicalJournalEntry,
 	CanonicalPayment,
+	CanonicalProduct,
 } from "../models/canonical";
 
 interface ErpAuthField {
@@ -39,10 +40,16 @@ export interface IErpAdapterPlugin<TCredentials = unknown> {
 	metadata: ErpMetadata;
 	auth: ErpAuthenticator<TCredentials>;
 
-	invoices: ErpResource<
+	invoicesRecievable: ErpResource<
 		CanonicalInvoice,
-		{ status?: "UNPAID" | "OVERDUE"; startDate?: string; endDate?: string }
+		{ status?: "UNPAID" | "OVERDUE" | "PAID"; startDate?: string; endDate?: string }
 	>;
+
+	invoicesPayable?: ErpResource<
+		CanonicalInvoice,
+		{ status?: "UNPAID" | "OVERDUE" | "PAID"; startDate?: string; endDate?: string }
+	>;
+
 	contacts: ErpResource<CanonicalContact>;
 	accounts: ErpResource<CanonicalAccount>;
 	journals: ErpResource<
@@ -53,6 +60,8 @@ export interface IErpAdapterPlugin<TCredentials = unknown> {
 		CanonicalPayment,
 		{ startDate?: string; endDate?: string }
 	>;
+
+	products?: ErpResource<CanonicalProduct>;
 
 	dashboard: {
 		getMetrics: () => Promise<{

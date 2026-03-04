@@ -71,3 +71,13 @@ export interface CanonicalPayment {
 	invoiceId?: string; // Optional link to an invoice
 	bankAccountId?: string; // Optional link to a bank account
 }
+
+export interface CanonicalProduct {
+	id: string;
+	name: string;
+	code?: string;
+	description?: string;
+	unitPrice?: number;
+	currency?: string;
+}
+

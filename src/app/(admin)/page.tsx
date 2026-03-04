@@ -26,6 +26,10 @@ interface DashboardMetrics {
 	lastUpdated?: string;
 	isStale?: boolean;
 	error?: string;
+	supportedFeatures?: {
+		ar: boolean;
+		ap: boolean;
+	};
 }
 
 export default function DashboardPage() {
@@ -162,6 +166,7 @@ export default function DashboardPage() {
 					sub="Outstanding"
 					value={fmtNumber(metrics.totalAR)}
 					valueClass="text-blue-400"
+					unavailable={metrics.supportedFeatures && !metrics.supportedFeatures.ar}
 				/>
 				<MetricCard
 					accentClass="before:absolute before:inset-0 before:bg-linear-to-br before:from-violet-500/5 before:to-transparent before:pointer-events-none"
@@ -171,6 +176,7 @@ export default function DashboardPage() {
 					sub="To be paid"
 					value={fmtNumber(metrics.totalAP)}
 					valueClass="text-violet-400"
+					unavailable={metrics.supportedFeatures && !metrics.supportedFeatures.ap}
 				/>
 				<MetricCard
 					accentClass="before:absolute before:inset-0 before:bg-linear-to-br before:from-red-500/5 before:to-transparent before:pointer-events-none"

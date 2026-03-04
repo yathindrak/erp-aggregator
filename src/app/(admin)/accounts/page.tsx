@@ -14,7 +14,6 @@ import {
 } from "@/components/ui/table";
 import type { CanonicalAccount } from "@/lib/erp/models/canonical";
 
-
 export default function AccountsPage() {
 	const { clientId } = useWorkspace();
 	const [accounts, setAccounts] = useState<CanonicalAccount[]>([]);
@@ -55,7 +54,7 @@ export default function AccountsPage() {
 						)}
 					</h1>
 					<p className="mt-1 text-muted-foreground text-sm">
-						Account codes from connected ERP — scroll to browse
+						Account codes from connected ERP
 					</p>
 				</div>
 			</div>
@@ -91,10 +90,9 @@ export default function AccountsPage() {
 									className="py-12 text-center text-muted-foreground text-sm"
 									colSpan={4}
 								>
-									No accounts found. Please connect an ERP first.
+									No accounts found.
 								</TableCell>
 							</TableRow>
-
 						) : (
 							accounts.map((a) => (
 								<TableRow

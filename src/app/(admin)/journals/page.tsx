@@ -101,7 +101,7 @@ export default function JournalsPage() {
 									className="py-12 text-center text-muted-foreground text-sm"
 									colSpan={4}
 								>
-									No journal entries found. Please connect an ERP first.
+									No journal entries found.
 								</TableCell>
 							</TableRow>
 

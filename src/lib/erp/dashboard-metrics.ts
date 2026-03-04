@@ -18,18 +18,38 @@ export async function getDashboardData(clientId: string) {
 
 		// Fetch fresh invoices separately to respect "no raw data in DB"
 		let recentTransactions: any[] = [];
+		let supportedFeatures = { ar: true, ap: true };
+
 		try {
 			const connections = await connectionManager.getAllConnections(clientId);
-			const invoiceResults = await Promise.all(
+			const adapterResults = await Promise.all(
 				connections.map(async (conn) => {
-					const adapter = await connectionManager.getAdapter(clientId, conn.erpName);
-					return adapter.invoices ? adapter.invoices.fetch() : [];
+					const adapter = await connectionManager.getAdapter(clientId, conn.erpName).catch(() => null);
+					if (!adapter) return { adapter: null, invoices: [] };
+
+					let invoices: any[] = [];
+					if (adapter.invoicesRecievable || adapter.invoicesPayable) {
+						const [ar, ap] = await Promise.all([
+							adapter.invoicesRecievable?.fetch() ?? Promise.resolve([]),
+							adapter.invoicesPayable?.fetch() ?? Promise.resolve([]),
+						]);
+						invoices = [...ar, ...ap];
+					}
+					return { adapter, invoices };
 				})
 			);
-			recentTransactions = invoiceResults.flat();
-			recentTransactions = recentTransactions
+
+			const validResults = adapterResults.filter((r) => r.adapter !== null);
+
+			recentTransactions = validResults
+				.flatMap((r) => r.invoices)
 				.sort((a, b) => compareDesc(new Date(a.issueDate), new Date(b.issueDate)))
 				.slice(0, 10);
+
+			supportedFeatures = {
+				ar: validResults.some((r) => !!r.adapter?.invoicesRecievable),
+				ap: validResults.some((r) => !!r.adapter?.invoicesPayable),
+			};
 		} catch (error) {
 			console.warn(`Could not fetch fresh invoices for client ${clientId}, serving metrics only`, error);
 		}
@@ -44,6 +64,7 @@ export async function getDashboardData(clientId: string) {
 			lastUpdated: cached.lastUpdated,
 			isStale,
 			recentTransactions,
+			supportedFeatures,
 		};
 	} catch (e) {
 		console.error(`Error fetching dashboard for client ${clientId}`, e);
@@ -73,12 +94,21 @@ export async function refreshDashboardData(clientId: string) {
 					conn.erpName,
 				);
 
-				const [metrics, invoices] = await Promise.all([
-					adapter.dashboard ? adapter.dashboard.getMetrics() : null,
-					adapter.invoices ? adapter.invoices.fetch() : [],
-				]);
+				const metricsPromise = adapter.dashboard.getMetrics();
 
-				return { metrics, invoices };
+				let invoicesPromise;
+				if (adapter.invoicesRecievable || adapter.invoicesPayable) {
+					invoicesPromise = Promise.all([
+						adapter.invoicesRecievable?.fetch() ?? Promise.resolve([]),
+						adapter.invoicesPayable?.fetch() ?? Promise.resolve([]),
+					]).then(([ar, ap]) => [...ar, ...ap]);
+				} else {
+					invoicesPromise = Promise.resolve([]);
+				}
+
+				const [metrics, invoices] = await Promise.all([metricsPromise, invoicesPromise]);
+
+				return { metrics, invoices, adapter };
 			})
 		);
 
@@ -111,6 +141,11 @@ export async function refreshDashboardData(clientId: string) {
 			lastUpdated: new Date(),
 		};
 
+		const supportedFeatures = {
+			ar: results.some(r => !!(r.adapter as any).invoicesRecievable),
+			ap: results.some(r => !!(r.adapter as any).invoicesPayable),
+		};
+
 		await db.aggregatedMetric.upsert({
 			where: { clientId },
 			create: {
@@ -120,10 +155,9 @@ export async function refreshDashboardData(clientId: string) {
 			update: data,
 		});
 
-		return data;
+		return { ...data, supportedFeatures };
 	} catch (e) {
 		console.error(`Error refreshing dashboard for client ${clientId}`, e);
 		return null;
 	}
 }
-

@@ -102,7 +102,7 @@ export default function ContactsPage() {
 									className="py-12 text-center text-muted-foreground text-sm"
 									colSpan={5}
 								>
-									No contacts found. Please connect an ERP first.
+									No contacts found.
 								</TableCell>
 							</TableRow>
 						) : (

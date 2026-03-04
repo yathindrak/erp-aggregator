@@ -9,7 +9,6 @@ import type {
 import { type AxiosInstance } from "axios";
 import { isBefore } from "date-fns";
 import { env } from "@/env";
-import { ErpAuthError } from "../../api-utils";
 import { createApiClient } from "./api-client";
 
 export type EconomicCredentials = {
@@ -92,33 +91,27 @@ export class EconomicAdapter implements IErpAdapterPlugin<EconomicCredentials> {
                 };
             } catch (e: any) {
                 console.error("[Economic] Auth verify failed:", e.response?.data || e.message);
-                const errorMsg = e instanceof ErpAuthError ? e.message : (e.response?.data?.message || "Failed to authenticate with e-conomic. Check tokens.");
-                throw new ErpAuthError(errorMsg);
+                const errorMsg = e.response?.data?.message || "Failed to authenticate with e-conomic. Check tokens.";
+                throw new Error(errorMsg);
             }
         },
     };
 
-    invoices = {
+    invoicesRecievable = {
         fetch: async ({
             status,
             startDate,
             endDate,
         }: {
-            status?: "UNPAID" | "OVERDUE";
+            status?: "UNPAID" | "OVERDUE" | "PAID";
             startDate?: string;
             endDate?: string;
         } = {}): Promise<CanonicalInvoice[]> => {
-            const [arRes, apRes] = await Promise.all([
-                this.api.get("/invoices/booked", {
-                    params: { pageSize: 1000 },
-                }).catch(() => ({ data: { collection: [] } })),
-                this.api.get("/supplier-invoices", {
-                    params: { pageSize: 1000 },
-                }).catch(() => ({ data: { collection: [] } })),
-            ]);
+            const arRes = await this.api.get("/invoices/booked", {
+                params: { pageSize: 1000 },
+            }).catch(() => ({ data: { collection: [] } }));
 
             const arData = arRes.data?.collection || [];
-            const apData = apRes.data?.collection || [];
 
             const mapAR = (inv: any): CanonicalInvoice => {
                 const openAmt = inv.remainder || inv.remainderInBaseCurrency || 0;
@@ -143,47 +136,24 @@ export class EconomicAdapter implements IErpAdapterPlugin<EconomicCredentials> {
                 };
             };
 
-            const mapAP = (inv: any): CanonicalInvoice => {
-                const openAmt = inv.remainder || 0;
-                const isOverdue = inv.dueDate && isBefore(new Date(inv.dueDate), new Date()) && openAmt > 0;
-                let mappedStatus: CanonicalInvoice["status"] = "PAID";
-                if (openAmt > 0) mappedStatus = isOverdue ? "OVERDUE" : "UNPAID";
-
-                return {
-                    id: String(inv.id || inv.supplierInvoiceNumber),
-                    type: "AP",
-                    status: mappedStatus,
-                    issueDate: inv.date || inv.invoiceDate,
-                    dueDate: inv.dueDate || "",
-                    currency: inv.currency || "DKK",
-                    totalAmount: Math.abs(inv.grossAmount || inv.amount || 0),
-                    openAmount: openAmt,
-                    contactId: String(inv.supplier?.supplierNumber || ""),
-                };
-            };
-
-            const all: CanonicalInvoice[] = [
-                ...arData.map(mapAR),
-                ...apData.map(mapAP),
-            ];
+            const all: CanonicalInvoice[] = arData.map(mapAR);
 
             if (status === "OVERDUE") return all.filter((i) => i.status === "OVERDUE");
             if (status === "UNPAID") return all.filter((i) => i.status === "UNPAID");
+            if (status === "PAID") return all.filter((i) => i.status === "PAID");
             return all;
         },
     };
 
     dashboard = {
         getMetrics: async () => {
-            const invoices = await this.invoices.fetch();
+            const invoices = await this.invoicesRecievable.fetch();
 
             const totalAR = invoices
                 .filter((i) => i.type === "AR" && i.openAmount > 0)
                 .reduce((sum, i) => sum + i.openAmount, 0);
 
-            const totalAP = invoices
-                .filter((i) => i.type === "AP" && i.openAmount > 0)
-                .reduce((sum, i) => sum + i.openAmount, 0);
+            const totalAP = 0; // AP not supported
 
             const overdue = invoices.filter((i) => i.status === "OVERDUE");
 
