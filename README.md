@@ -1,29 +1,41 @@
-# Create T3 App
+# Taxxa ERP Aggregator
 
-This is a [T3 Stack](https://create.t3.gg/) project bootstrapped with `create-t3-app`.
+This platform enables accounting firms to manage clients across multiple ERP systems via a unified interface. It serves as foundational infrastructure for cross-ERP financial intelligence.
 
-## What's next? How do I make an app with this?
+## System Architecture
 
-We try to keep this project as simple as possible, so you can start with just the scaffolding we set up for you, and add additional things later when they become necessary.
+See [ARCHITECTURE.md](./ARCHITECTURE.md).
 
-If you are not familiar with the different technologies used in this project, please refer to the respective docs. If you still are in the wind, please join our [Discord](https://t3.gg/discord) and ask for help.
+## Integrated Platforms
 
-- [Next.js](https://nextjs.org)
-- [NextAuth.js](https://next-auth.js.org)
-- [Prisma](https://prisma.io)
-- [Drizzle](https://orm.drizzle.team)
-- [Tailwind CSS](https://tailwindcss.com)
-- [tRPC](https://trpc.io)
+The following platforms are currently supported:
+- **Tripletex** (Norway) - Token-based Session Auth
+- **Xero** (UK/Global) - OAuth 2.0 + PKCE Flow
+- **e-conomic** (Denmark) - Dual-key Token System
 
-## Learn More
+## Getting Started
 
-To learn more about the [T3 Stack](https://create.t3.gg/), take a look at the following resources:
+### Prerequisites
+- Node.js 18+
+- PostgreSQL (or any Prisma-supported database)
+- ERP Sandbox Accounts (Tripletex, Xero, e-conomic)
 
-- [Documentation](https://create.t3.gg/)
-- [Learn the T3 Stack](https://create.t3.gg/en/faq#what-learning-resources-are-currently-available) — Check out these awesome tutorials
+### Environment Setup
+Create a `.env` file, copy the contents of `.env.example` and fill in the values.
 
-You can check out the [create-t3-app GitHub repository](https://github.com/t3-oss/create-t3-app) — your feedback and contributions are welcome!
+### Installation
+```bash
+npm install
+npx prisma generate
+npx prisma db push
+```
 
-## How do I deploy this?
+### Running the App
+```bash
+npm run dev
+```
 
-Follow our deployment guides for [Vercel](https://create.t3.gg/en/deployment/vercel), [Netlify](https://create.t3.gg/en/deployment/netlify) and [Docker](https://create.t3.gg/en/deployment/docker) for more information.
+### Running Tests
+```bash
+npm test
+```
