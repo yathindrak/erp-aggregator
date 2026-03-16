@@ -25,6 +25,7 @@ import {
   IconPlus,
   IconCash,
   IconLogout,
+  IconUsersGroup,
 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 
@@ -240,6 +241,20 @@ export function AppSidebar() {
           className={cn(
             "h-5 w-5 shrink-0 transition-colors",
             pathname === "/connections"
+              ? "text-blue-400"
+              : "text-muted-foreground",
+          )}
+        />
+      ),
+    },
+    {
+      label: "Members",
+      href: "/members",
+      icon: (
+        <IconUsersGroup
+          className={cn(
+            "h-5 w-5 shrink-0 transition-colors",
+            pathname === "/members"
               ? "text-blue-400"
               : "text-muted-foreground",
           )}

@@ -2,15 +2,18 @@
 
 import { signIn } from "@/lib/auth-client";
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 export default function LoginPage() {
 	const [loading, setLoading] = useState(false);
+	const searchParams = useSearchParams();
+	const redirect = searchParams.get("redirect") ?? "/";
 
 	async function handleGoogleSignIn() {
 		setLoading(true);
 		await signIn.social({
 			provider: "google",
-			callbackURL: "/",
+			callbackURL: redirect,
 		});
 		setLoading(false);
 	}
