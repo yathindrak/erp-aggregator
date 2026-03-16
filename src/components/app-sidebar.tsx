@@ -296,7 +296,7 @@ export function AppSidebar() {
           <button
             type="button"
             onClick={() => signOut({ fetchOptions: { onSuccess: () => router.push("/login") } })}
-            className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground"
+            className="flex w-full cursor-pointer items-center gap-3 rounded-lg px-2 py-2 text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground"
           >
             <IconLogout className="h-5 w-5 shrink-0" />
             <span>Sign out</span>

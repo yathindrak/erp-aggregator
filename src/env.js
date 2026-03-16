@@ -19,6 +19,7 @@ export const env = createEnv({
 		CRON_SECRET: z.string().min(1).optional(),
 		GOOGLE_CLIENT_ID: z.string().min(1),
 		GOOGLE_CLIENT_SECRET: z.string().min(1),
+		BETTER_AUTH_SECRET: z.string().min(32),
 	},
 
 	/**
@@ -47,6 +48,7 @@ export const env = createEnv({
 		CRON_SECRET: process.env.CRON_SECRET,
 		GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
 		GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
+		BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET,
 		// NEXT_PUBLIC_CLIENTVAR: process.env.NEXT_PUBLIC_CLIENTVAR,
 	},
 	/**
