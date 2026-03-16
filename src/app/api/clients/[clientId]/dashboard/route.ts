@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDashboardData, refreshDashboardData } from "@/lib/erp/dashboard-metrics";
-import { withErrorHandler, ApiError } from "@/lib/api-utils";
+import { withClientAuth } from "@/lib/api-utils";
 
 export async function GET(
     req: NextRequest,
@@ -10,11 +10,7 @@ export async function GET(
     const { searchParams } = new URL(req.url);
     const refresh = searchParams.get("refresh") === "true";
 
-    return withErrorHandler(async () => {
-        if (!clientId) {
-            throw new ApiError("clientId is required", 400);
-        }
-
+    return withClientAuth(req, clientId, async () => {
         const data = refresh
             ? await refreshDashboardData(clientId)
             : await getDashboardData(clientId);

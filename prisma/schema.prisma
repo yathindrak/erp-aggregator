@@ -8,14 +8,108 @@ datasource db {
     url      = env("DATABASE_URL")
 }
 
-/// Clients managed by the accountant
+model User {
+    id            String   @id
+    name          String
+    email         String   @unique
+    emailVerified Boolean
+    image         String?
+    createdAt     DateTime
+    updatedAt     DateTime
+    sessions    Session[]
+    accounts    Account[]
+    members     Member[]
+    invitations Invitation[]
+}
+
+model Session {
+    id        String   @id
+    expiresAt DateTime
+    token     String   @unique
+    createdAt DateTime
+    updatedAt DateTime
+    ipAddress String?
+    userAgent String?
+    userId               String
+    user                 User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+    activeOrganizationId String?
+}
+
+model Account {
+    id                    String    @id
+    accountId             String
+    providerId            String
+    userId                String
+    user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+    accessToken           String?
+    refreshToken          String?
+    idToken               String?
+    accessTokenExpiresAt  DateTime?
+    refreshTokenExpiresAt DateTime?
+    scope                 String?
+    password              String?
+    createdAt             DateTime
+    updatedAt             DateTime
+}
+
+model Verification {
+    id         String    @id
+    identifier String
+    value      String
+    expiresAt  DateTime
+    createdAt  DateTime?
+    updatedAt  DateTime?
+}
+
+model Organization {
+    id        String   @id
+    name      String
+    slug      String?  @unique
+    logo      String?
+    createdAt DateTime
+    metadata  String?
+
+    members     Member[]
+    invitations Invitation[]
+    clients     Client[]
+}
+
+model Member {
+    id             String   @id
+    organizationId String
+    userId         String
+    role           String
+    createdAt      DateTime
+
+    organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+    user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Invitation {
+    id             String   @id
+    organizationId String
+    email          String
+    role           String?
+    status         String
+    expiresAt      DateTime
+    inviterId      String
+
+    organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+    inviter      User         @relation(fields: [inviterId], references: [id], onDelete: Cascade)
+}
+
+/// Clients managed by an organization
 model Client {
-    id               String            @id @default(uuid())
-    name             String
-    createdAt        DateTime          @default(now())
-    updatedAt        DateTime          @updatedAt
+    id             String  @id @default(uuid())
+    name           String
+    organizationId String
+
+    organization     Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
     erpConnections   Connection[]
     aggregatedMetric AggregatedMetric?
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 }
 
 /// Link between a client and their active ERP credentials

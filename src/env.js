@@ -12,11 +12,13 @@ export const env = createEnv({
 		ECONOMIC_APP_SECRET_TOKEN: z.string().min(1),
 		XERO_CLIENT_ID: z.string().min(1),
 		XERO_CLIENT_SECRET: z.string().min(1),
-		APP_URL: z.string().url().default("http://localhost:3000"),
+		APP_URL: z.string().url(),
 		NODE_ENV: z
 			.enum(["development", "test", "production"])
 			.default("development"),
 		CRON_SECRET: z.string().min(1).optional(),
+		GOOGLE_CLIENT_ID: z.string().min(1),
+		GOOGLE_CLIENT_SECRET: z.string().min(1),
 	},
 
 	/**
@@ -43,6 +45,8 @@ export const env = createEnv({
 		NEXT_PUBLIC_ECONOMIC_APP_PUBLIC_TOKEN: process.env.NEXT_PUBLIC_ECONOMIC_APP_PUBLIC_TOKEN,
 		NODE_ENV: process.env.NODE_ENV,
 		CRON_SECRET: process.env.CRON_SECRET,
+		GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
+		GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
 		// NEXT_PUBLIC_CLIENTVAR: process.env.NEXT_PUBLIC_CLIENTVAR,
 	},
 	/**

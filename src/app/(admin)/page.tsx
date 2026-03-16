@@ -33,13 +33,23 @@ interface DashboardMetrics {
 }
 
 export default function DashboardPage() {
-	const { clientId, erpName } = useWorkspace();
+	const { clientId, erpName, bootstrapped } = useWorkspace();
 
 	const [metrics, setMetrics] = useState<DashboardMetrics>({});
 	const [metricsLoading, setMetricsLoading] = useState(false);
 	const [refreshing, setRefreshing] = useState(false);
 	const [invoices, setInvoices] = useState<CanonicalInvoice[]>([]);
 	const [invLoading, setInvLoading] = useState(false);
+
+	// Reset dashboard state immediately when workspace is switching orgs
+	useEffect(() => {
+		if (!bootstrapped) {
+			setMetrics({});
+			setInvoices([]);
+			setMetricsLoading(true);
+			setInvLoading(true);
+		}
+	}, [bootstrapped]);
 	const [invoiceFilter, setInvoiceFilter] = useState<
 		"all" | "UNPAID" | "OVERDUE"
 	>("all");

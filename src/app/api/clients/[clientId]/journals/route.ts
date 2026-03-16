@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { connectionManager } from "@/lib/erp/ConnectionManager";
-import { withErrorHandler, ApiError } from "@/lib/api-utils";
+import { withClientAuth } from "@/lib/api-utils";
 
 export async function GET(
     req: NextRequest,
@@ -9,11 +9,7 @@ export async function GET(
 ) {
     const { clientId } = await params;
 
-    return withErrorHandler(async () => {
-        if (!clientId) {
-            throw new ApiError("clientId is required", 400);
-        }
-
+    return withClientAuth(req, clientId, async () => {
         const connections = await connectionManager.getAllConnections(clientId);
         if (connections.length === 0) {
             return NextResponse.json(

@@ -1,4 +1,6 @@
-import { NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import { db } from "@/server/db";
 
 export class ApiError extends Error {
     constructor(
@@ -23,6 +25,28 @@ export class ErpRateLimitError extends ApiError {
         super(message, 429, "RATE_LIMITED");
         this.name = "ErpRateLimitError";
     }
+}
+
+export async function withClientAuth(
+    req: NextRequest,
+    clientId: string,
+    handler: () => Promise<Response>
+): Promise<Response> {
+    return withErrorHandler(async () => {
+        const session = await auth.api.getSession({ headers: req.headers });
+        if (!session) throw new ApiError("Unauthorized", 401);
+
+        const client = await db.client.findFirst({
+            where: {
+                id: clientId,
+                organization: { members: { some: { userId: session.user.id } } },
+            },
+            select: { id: true },
+        });
+        if (!client) throw new ApiError("Forbidden", 403);
+
+        return handler();
+    });
 }
 
 export async function withErrorHandler(handler: () => Promise<Response>) {
