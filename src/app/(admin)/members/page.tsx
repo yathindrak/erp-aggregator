@@ -30,6 +30,7 @@ import {
 	IconCheck,
 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
+import { useWorkspace } from "@/providers/workspace-provider";
 
 type Role = "owner" | "admin" | "member";
 
@@ -93,6 +94,7 @@ function CopyLinkButton({ invitationId }: { invitationId: string }) {
 }
 
 export default function MembersPage() {
+	const { orgId } = useWorkspace();
 	const [members, setMembers] = useState<Member[]>([]);
 	const [invitations, setInvitations] = useState<Invitation[]>([]);
 	const [currentUserRole, setCurrentUserRole] = useState<Role>("member");
@@ -131,7 +133,7 @@ export default function MembersPage() {
 		} finally {
 			setLoading(false);
 		}
-	}, [executeGetMembers, executeGetInvitations]);
+	}, [orgId, executeGetMembers, executeGetInvitations]);
 
 	useEffect(() => { void load(); }, [load]);
 
