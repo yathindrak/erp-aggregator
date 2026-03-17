@@ -1,10 +1,10 @@
 "use client";
 
 import { signIn } from "@/lib/auth-client";
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 
-export default function LoginPage() {
+function LoginForm() {
 	const [loading, setLoading] = useState(false);
 	const searchParams = useSearchParams();
 	const redirect = searchParams.get("redirect") ?? "/";
@@ -19,6 +19,20 @@ export default function LoginPage() {
 	}
 
 	return (
+		<button
+			type="button"
+			onClick={handleGoogleSignIn}
+			disabled={loading}
+			className="flex w-full items-center justify-center gap-3 rounded-lg border border-border bg-background px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+		>
+			<GoogleIcon />
+			{loading ? "Signing in…" : "Continue with Google"}
+		</button>
+	);
+}
+
+export default function LoginPage() {
+	return (
 		<div className="flex min-h-screen items-center justify-center bg-background">
 			<div className="w-full max-w-sm space-y-6 rounded-xl border border-border bg-card p-8 shadow-sm">
 				<div className="space-y-1 text-center">
@@ -29,16 +43,9 @@ export default function LoginPage() {
 						Multi-ERP Financial Workspace
 					</p>
 				</div>
-
-				<button
-					type="button"
-					onClick={handleGoogleSignIn}
-					disabled={loading}
-					className="flex w-full items-center justify-center gap-3 rounded-lg border border-border bg-background px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
-				>
-					<GoogleIcon />
-					{loading ? "Signing in…" : "Continue with Google"}
-				</button>
+				<Suspense>
+					<LoginForm />
+				</Suspense>
 			</div>
 		</div>
 	);
