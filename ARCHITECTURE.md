@@ -54,9 +54,15 @@ Since the dashboard is scoped per-client (where each client maps to exactly one 
 - **Optional Interfaces (Capability Gaps):** Some features in `IErpAdapterPlugin` are optional. If an ERP lacks a Payments API, the adapter omits it and the platform falls back gracefully, showing empty states rather than breaking.
 - **Rate Limiting & Retries:** Vendor-specific rate limits are handled via a centralized API client utility using Axios interceptors, enabling retry with backoff for 429 errors. If retries are exhausted, the utility will `return Promise.reject(new ErpRateLimitError());` to ensure a consistent error experience across all adapters.
 
-## Project Scope & Limitations
+## Multi-Tenancy & Workspace Switching
 
-- **No User Authentication:** The platform currently lacks a user-facing authentication system. The primary technical focus of this iteration is building and proving out the loosely coupled adapter architecture and ensuring seamless integrations with various ERP systems, rather than building user management flows.
+The platform supports multiple workspaces (organizations) per user, powered by [Better Auth](https://better-auth.com) for session management.
+
+### Data Isolation
+
+Each workspace is fully isolated at the database level — clients, ERP connections, and cached dashboard metrics are all scoped by organization. The active organization is resolved server-side from the session at request time, so no client-supplied value can cross tenant boundaries.
+
+- **Authentication:** User authentication, multi-tenancy, and member management (invite, roles, removal) are handled by Better Auth with a Prisma adapter backed by PostgreSQL.
 
 ## Future Explorations
 

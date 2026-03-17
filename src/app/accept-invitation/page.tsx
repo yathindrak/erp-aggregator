@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAction } from "next-safe-action/hooks";
 import { acceptInvitation } from "@/actions/members.actions";
 import { IconLoader2, IconCheck, IconAlertCircle } from "@tabler/icons-react";
 
-export default function AcceptInvitationPage() {
+function AcceptInvitationContent() {
 	const router = useRouter();
 	const searchParams = useSearchParams();
 	const token = searchParams.get("token");
@@ -76,5 +76,13 @@ export default function AcceptInvitationPage() {
 				)}
 			</div>
 		</div>
+	);
+}
+
+export default function AcceptInvitationPage() {
+	return (
+		<Suspense>
+			<AcceptInvitationContent />
+		</Suspense>
 	);
 }
